@@ -4,6 +4,8 @@
 **Bài báo neo (anchor paper):** J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, "GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection," *IEEE Trans. Inf. Forensics Security*, vol. 20, pp. 4026–4041, 2025, doi: 10.1109/TIFS.2025.3557741 (CC BY 4.0) — ký hiệu **[1]** trong tài liệu này.
 **Ngày lập:** 13/10/2026
 
+> **Tiến độ & work plan live:** [`WORK_PLAN.md`](WORK_PLAN.md) — file này theo dõi trạng thái thực tế, thay thế trạng thái WBS §7.
+
 > **Quy ước trích dẫn trong tài liệu**
 > - `[1, tr. 4030, §III-A.2]` = bài báo GTAE-IDS, trang (theo số trang tạp chí), mục. Số trang được đối chiếu trực tiếp từ bản PDF IEEE Xplore (16 trang, tr. 4026–4041).
 > - Bảng (Table) và Hình (Fig.) đánh số **theo bài báo gốc**. Bài báo có 15 bảng (Table I–XV) và 5 hình; nội dung các bảng được đọc trực tiếp từ ảnh bảng trên IEEE Xplore.

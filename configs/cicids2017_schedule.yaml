@@ -1,0 +1,175 @@
+# CIC-IDS2017 attack schedule used for flow labeling (design doc §4.3).
+# Source: UNB CIC dataset page, https://www.unb.ca/cic/datasets/ids-2017.html
+# Retrieved: 2026-10-24. Times are LOCAL times as printed by CIC; the timezone is
+# not stated by CIC, so `utc_offset_minutes` in data.yaml must be calibrated (T6).
+#
+# NAT path for external attacks:
+#   attacker -> 205.174.165.80 (firewall) -> 172.16.0.1 -> victim (LAN)
+# NAT aliases are only treated as the initiator inside the matching window;
+# a non-attack flow to/from 172.16.0.1 outside these windows stays benign.
+dataset: CIC-IDS2017
+
+# Attackers that never produce benign traffic in this lab. Flows involving them
+# outside an attack window are marked UNCERTAIN instead of benign.
+true_attackers:
+  - 205.174.165.73
+  - 205.174.165.69
+  - 205.174.165.70
+  - 205.174.165.71
+
+windows:
+  # ---------------- Tuesday 2017-07-04 ----------------
+  - date: "2017-07-04"
+    attack: FTP-Patator
+    ranges: [["09:20", "10:20"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [21]
+
+  - date: "2017-07-04"
+    attack: SSH-Patator
+    ranges: [["14:00", "15:00"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [22]
+
+  # ---------------- Wednesday 2017-07-05 ----------------
+  - date: "2017-07-05"
+    attack: DoS slowloris
+    ranges: [["09:47", "10:10"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-05"
+    attack: DoS Slowhttptest
+    ranges: [["10:14", "10:35"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-05"
+    attack: DoS Hulk
+    ranges: [["10:43", "11:00"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-05"
+    attack: DoS GoldenEye
+    ranges: [["11:10", "11:23"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-05"
+    attack: Heartbleed
+    variant: port_444
+    ranges: [["15:12", "15:32"]]
+    attacker_ips: ["205.174.165.73"]
+    # CIC page prints 172.16.0.11 for this path (likely a typo); accept both.
+    nat_aliases: ["205.174.165.80", "172.16.0.1", "172.16.0.11"]
+    victim_ips: ["192.168.10.51", "205.174.165.66"]
+    ports: [444]
+
+  # ---------------- Thursday 2017-07-06 ----------------
+  - date: "2017-07-06"
+    attack: Web Attack - Brute Force
+    ranges: [["09:20", "10:00"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-06"
+    attack: Web Attack - XSS
+    ranges: [["10:15", "10:35"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-06"
+    attack: Web Attack - Sql Injection
+    ranges: [["10:40", "10:42"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]
+
+  - date: "2017-07-06"
+    attack: Infiltration
+    variant: meta_exploit
+    ranges: [["14:19", "14:21"], ["14:33", "14:35"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.8"]
+
+  - date: "2017-07-06"
+    attack: Infiltration
+    variant: cool_disk
+    ranges: [["14:53", "15:00"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.25"]
+
+  - date: "2017-07-06"
+    attack: Infiltration
+    variant: dropbox
+    ranges: [["15:04", "15:45"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.8"]
+
+  # The official CIC page also lists a lateral Nmap step from 192.168.10.8 to
+  # the whole LAN (15:04-15:45). CIC's CSV labels those flows BENIGN and the
+  # paper's Table VII Infiltration graph has only 1,764 edges, so the lateral
+  # step is intentionally excluded from the primary label (documented in QA).
+
+  # ---------------- Friday 2017-07-07 ----------------
+  - date: "2017-07-07"
+    attack: Bot
+    variant: ARES
+    ranges: [["10:02", "11:02"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips:
+      - "192.168.10.15"
+      - "192.168.10.9"
+      - "192.168.10.14"
+      - "192.168.10.5"
+      - "192.168.10.8"
+
+  - date: "2017-07-07"
+    attack: PortScan
+    variant: firewall_on
+    ranges: [["13:55", "14:35"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+
+  - date: "2017-07-07"
+    attack: PortScan
+    variant: firewall_off
+    ranges: [["14:51", "15:29"]]
+    attacker_ips: ["205.174.165.73"]
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+
+  - date: "2017-07-07"
+    attack: DDoS
+    variant: LOIT
+    ranges: [["15:56", "16:16"]]
+    attacker_ips:
+      - "205.174.165.69"
+      - "205.174.165.70"
+      - "205.174.165.71"
+    nat_aliases: ["205.174.165.80", "172.16.0.1"]
+    victim_ips: ["192.168.10.50", "205.174.165.68"]
+    ports: [80]

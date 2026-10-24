@@ -1,0 +1,17 @@
+{
+  "total_flows": 110550,
+  "benign": 102655,
+  "attack": 6483,
+  "uncertain": 1412,
+  "uncertain_rate": 0.012772501130710085,
+  "attack_types": {
+    "FTP-Patator": 3972,
+    "SSH-Patator": 2511
+  },
+  "label_reasons": {
+    "flow_started_before_capture": 1412,
+    "no_attack_window": 102655,
+    "window:FTP-Patator": 3972,
+    "window:SSH-Patator": 2511
+  }
+}

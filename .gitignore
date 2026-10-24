@@ -1,3 +1,30 @@
 skills-lock.json
 .claude/
 .agents/
+
+# environments / caches
+.venv/
+__pycache__/
+.pytest_cache/
+
+# datasets: never commit or redistribute pcaps (CIC licence)
+data/raw/
+data/processed/
+data/graphs/
+
+# experiment outputs and model artifacts
+experiments/
+*.pt
+*.npy
+
+# Kaggle upload staging (dataset tar is rebuilt by the upload command)
+kaggle_stage/
+kaggle_upload/
+kaggle_smoke_stage/
+kaggle_smoke_upload/
+kaggle_up_*/
+kaggle_gtae-ids-*/
+kaggle_upload*/
+
+# local checkpoint archives
+artifacts/

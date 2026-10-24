@@ -1,0 +1,76 @@
+{
+  "flows": 280306,
+  "skipped_uncertain": 1951,
+  "matched": 278309,
+  "unmatched": 46,
+  "match_rate": 0.9998347434032081,
+  "agreement": 0.9917968876320924,
+  "confusion": {
+    "tn": 103906,
+    "fp": 2279,
+    "fn": 4,
+    "tp": 172120
+  },
+  "mismatch_examples": [
+    {
+      "flow_id": 29361,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 11.1
+    },
+    {
+      "flow_id": 3594,
+      "ours": 0,
+      "csv_label": "DoS slowloris",
+      "delta_s": 0.5
+    },
+    {
+      "flow_id": 12587,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 46.2
+    },
+    {
+      "flow_id": 12588,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 46.2
+    },
+    {
+      "flow_id": 12589,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 46.2
+    },
+    {
+      "flow_id": 12590,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 46.2
+    },
+    {
+      "flow_id": 12593,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 46.2
+    },
+    {
+      "flow_id": 13303,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 20.4
+    },
+    {
+      "flow_id": 13310,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 21.5
+    },
+    {
+      "flow_id": 25353,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 3.2
+    }
+  ]
+}

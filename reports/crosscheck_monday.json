@@ -1,0 +1,15 @@
+{
+  "flows": 133793,
+  "skipped_uncertain": 1539,
+  "matched": 132244,
+  "unmatched": 10,
+  "match_rate": 0.9999243879202141,
+  "agreement": 1.0,
+  "confusion": {
+    "tn": 132244,
+    "fp": 0,
+    "fn": 0,
+    "tp": 0
+  },
+  "mismatch_examples": []
+}

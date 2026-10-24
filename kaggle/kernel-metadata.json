@@ -1,0 +1,16 @@
+{
+  "id": "tdwuyn/gtae-ids-smoke",
+  "title": "GTAE-IDS smoke",
+  "code_file": "smoke.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "tdwuyn/gtae-ids-smoke-artifacts"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

@@ -1,0 +1,76 @@
+{
+  "flows": 170872,
+  "skipped_uncertain": 2499,
+  "matched": 168281,
+  "unmatched": 92,
+  "match_rate": 0.9994535941035677,
+  "agreement": 0.9986154111278159,
+  "confusion": {
+    "tn": 166218,
+    "fp": 227,
+    "fn": 6,
+    "tp": 1830
+  },
+  "mismatch_examples": [
+    {
+      "flow_id": 3276,
+      "ours": 0,
+      "csv_label": "Web Attack \ufffd Brute Force",
+      "delta_s": 29.7
+    },
+    {
+      "flow_id": 6117,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 3.7
+    },
+    {
+      "flow_id": 6119,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 1.2
+    },
+    {
+      "flow_id": 6541,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 3.3
+    },
+    {
+      "flow_id": 6665,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 0.4
+    },
+    {
+      "flow_id": 6886,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 5.5
+    },
+    {
+      "flow_id": 8252,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 2.6
+    },
+    {
+      "flow_id": 2735,
+      "ours": 0,
+      "csv_label": "Web Attack \ufffd Brute Force",
+      "delta_s": 5.1
+    },
+    {
+      "flow_id": 2748,
+      "ours": 0,
+      "csv_label": "Web Attack \ufffd Brute Force",
+      "delta_s": 1.1
+    },
+    {
+      "flow_id": 2755,
+      "ours": 0,
+      "csv_label": "Web Attack \ufffd Brute Force",
+      "delta_s": 7.4
+    }
+  ]
+}

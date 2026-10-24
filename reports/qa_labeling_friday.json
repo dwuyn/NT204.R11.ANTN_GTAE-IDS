@@ -1,0 +1,21 @@
+{
+  "total_flows": 349256,
+  "benign": 87400,
+  "attack": 255745,
+  "uncertain": 6111,
+  "uncertain_rate": 0.017497194035320796,
+  "attack_types": {
+    "Bot": 736,
+    "DDoS": 94911,
+    "PortScan": 160098
+  },
+  "label_reasons": {
+    "attacker_in_window_no_victim_match": 1029,
+    "flow_started_before_capture": 2044,
+    "known_attacker_outside_window": 3038,
+    "no_attack_window": 87400,
+    "window:Bot": 736,
+    "window:DDoS": 94911,
+    "window:PortScan": 160098
+  }
+}

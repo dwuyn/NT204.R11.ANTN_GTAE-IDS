@@ -1,0 +1,76 @@
+{
+  "flows": 110550,
+  "skipped_uncertain": 1412,
+  "matched": 109108,
+  "unmatched": 30,
+  "match_rate": 0.999725118657113,
+  "agreement": 0.9952157495325732,
+  "confusion": {
+    "tn": 102159,
+    "fp": 56,
+    "fn": 466,
+    "tp": 6427
+  },
+  "mismatch_examples": [
+    {
+      "flow_id": 5430,
+      "ours": 0,
+      "csv_label": "FTP-Patator",
+      "delta_s": 52.8
+    },
+    {
+      "flow_id": 85286,
+      "ours": 0,
+      "csv_label": "SSH-Patator",
+      "delta_s": 48.2
+    },
+    {
+      "flow_id": 6947,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 28.6
+    },
+    {
+      "flow_id": 7277,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 38.7
+    },
+    {
+      "flow_id": 7366,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 4.7
+    },
+    {
+      "flow_id": 7408,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 14.1
+    },
+    {
+      "flow_id": 7510,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 42.1
+    },
+    {
+      "flow_id": 7856,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 0.5
+    },
+    {
+      "flow_id": 7864,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 4.1
+    },
+    {
+      "flow_id": 7980,
+      "ours": 1,
+      "csv_label": "BENIGN",
+      "delta_s": 32.0
+    }
+  ]
+}

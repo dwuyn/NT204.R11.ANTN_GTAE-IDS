@@ -1,0 +1,23 @@
+{
+  "total_flows": 170872,
+  "benign": 166316,
+  "attack": 2057,
+  "uncertain": 2499,
+  "uncertain_rate": 0.014624982442998268,
+  "attack_types": {
+    "Infiltration": 8,
+    "Web Attack - Brute Force": 1358,
+    "Web Attack - Sql Injection": 12,
+    "Web Attack - XSS": 679
+  },
+  "label_reasons": {
+    "attacker_in_window_no_victim_match": 9,
+    "flow_started_before_capture": 2458,
+    "known_attacker_outside_window": 32,
+    "no_attack_window": 166316,
+    "window:Infiltration": 8,
+    "window:Web Attack - Brute Force": 1358,
+    "window:Web Attack - Sql Injection": 12,
+    "window:Web Attack - XSS": 679
+  }
+}

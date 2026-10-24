@@ -1,0 +1,57 @@
+# Project decisions agreed on 2026-10-24 (answers replace the open items of
+# Appendix D in docs/GTAE-IDS_Research_docs.md).
+
+scope:
+  profile: MUST+SHOULD+MAY
+  datasets: [CIC-IDS2017]
+  may_items:
+    - cicids2018_with_benign   # generalization with a real FPR
+    - latency                  # end-to-end + us/packet
+    - header_hygiene           # P2 ablation (TTL, checksums)
+  excluded:
+    - ACI-IoT-2023             # IEEE DataPort, 32 GB; outside default plan
+
+repo:
+  code: this repository
+  reuse_legacy_ids_repo: false  # ~/Documents/IDS uses Scapy; flow semantics differ
+
+split:
+  primary: temporal_T           # train Mon, test Tue-Fri
+  secondary: random_R           # paper-like, for Table VI comparison
+
+labels:
+  primary: cic_schedule_plus_csv
+  secondary: engelen_corrected
+  secondary_usage: eval_only    # reuse embeddings; no retraining
+
+compute:
+  preprocessing: local
+  training: kaggle              # upload processed parquet/graphs, not 51 GB of pcap
+  local_gpu: "GTX 1650 4GB"
+
+paths:
+  raw: data/raw
+  packets: data/processed
+  graphs: data/graphs
+  runs: experiments
+
+flow:
+  protocols: [TCP]
+  max_packets: 8
+  p_values: [2, 3, 4, 5, 6, 7, 8]
+  must_p_values: [2, 4, 8]
+  idle_timeout_s: 120
+  require_syn_start: true
+  # UTC -> CIC local time; calibrated 2026-10-24: -180 (UTC-3) from 510
+  # smoke-parsed flows matched against Wednesday CSV (delta mode -180/-181).
+  utc_offset_minutes: -180
+  label_pad_s: 60
+  csv_time_tolerance_s: 120   # CSV timestamps are minute-resolution
+
+sampling:
+  train1_edges: 5000
+  train2_edges: 2000
+  test_benign_edges: 5000
+  test_attack_cap_per_type: 5000
+
+seeds: [0, 1, 2]

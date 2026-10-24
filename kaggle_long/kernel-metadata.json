@@ -1,0 +1,19 @@
+{
+  "id": "tdwuyn/gtae-ids-train-long",
+  "title": "GTAE-IDS train long",
+  "code_file": "train_full.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "tdwuyn/gtae-ids-smoke-artifacts",
+    "tdwuyn/gtae-ids-p2-p3",
+    "tdwuyn/gtae-ids-p4-p5",
+    "tdwuyn/gtae-ids-p7"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

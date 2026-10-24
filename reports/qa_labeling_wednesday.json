@@ -1,0 +1,23 @@
+{
+  "total_flows": 280306,
+  "benign": 103929,
+  "attack": 174426,
+  "uncertain": 1951,
+  "uncertain_rate": 0.006960250583291118,
+  "attack_types": {
+    "DoS GoldenEye": 7545,
+    "DoS Hulk": 158770,
+    "DoS Slowhttptest": 4216,
+    "DoS slowloris": 3894,
+    "Heartbleed": 1
+  },
+  "label_reasons": {
+    "flow_started_before_capture": 1951,
+    "no_attack_window": 103929,
+    "window:DoS GoldenEye": 7545,
+    "window:DoS Hulk": 158770,
+    "window:DoS Slowhttptest": 4216,
+    "window:DoS slowloris": 3894,
+    "window:Heartbleed": 1
+  }
+}
