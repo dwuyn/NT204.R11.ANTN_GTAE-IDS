@@ -32,14 +32,15 @@ def evaluate_model(
     device: torch.device,
     contamination: float = 0.01,
     calibration_fraction: float = 0.2,
+    k_max: int = 32,
 ) -> dict:
     train2 = load_graph(graphs_dir / f"p{p}" / "train2.npz")
     test = load_graph(graphs_dir / f"p{p}" / "test.npz")
     model, checkpoint = load_model(model_path, device)
     use_pe = bool(checkpoint.get("use_pe", True))
 
-    z_train = embed_graph(model, train2, device, use_pe=use_pe, seed=seed)
-    z_test = embed_graph(model, test, device, use_pe=use_pe, seed=seed)
+    z_train = embed_graph(model, train2, device, k_max=k_max, use_pe=use_pe, seed=seed)
+    z_test = embed_graph(model, test, device, k_max=k_max, use_pe=use_pe, seed=seed)
 
     rng = np.random.default_rng(seed)
     permutation = rng.permutation(len(z_train))
@@ -134,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument("--contamination", type=float, default=0.01)
     parser.add_argument("--calibration-fraction", type=float, default=0.2)
+    parser.add_argument("--k-max", type=int, default=32)
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     args = parser.parse_args(argv)
 
@@ -162,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
                 device,
                 contamination=args.contamination,
                 calibration_fraction=args.calibration_fraction,
+                k_max=args.k_max,
             )
             for name in DETECTOR_NAMES:
                 rows.append(_summary_row(result, name, "detector"))

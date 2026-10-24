@@ -160,7 +160,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | 7 | 15,1% | 3,3% | 0,83 |
 | 8 | 11,5% | 2,5% | 0,67 |
 
-**Chẩn đoán:** RandomForest supervised trên **cùng edge features** đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972) → features/labels tách được. MLP-AE không đồ thị cũng chỉ TPR 1,5–5% (AUROC 0,60–0,67). Bỏ LapPE chỉ cải thiện nhẹ. Kết luận: **one-class AE + detector chuẩn chưa học được biên benign**; chưa tái hiện 99% của paper. Đây là kết quả tạm thời, **không dùng để claim tái hiện thành công**.
+**Chẩn đoán:** RandomForest supervised trên **cùng edge features** (cùng ngày/phiên) đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972); nhưng **cross-day/open-class** (train Tue/Wed → test Thu/Fri) chỉ **18,1%** ở FPR 6,7% (AUROC 0,924). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; chưa tái hiện 99% của paper. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
 
 **Quyết định:** tạm dừng tinh chỉnh; giữ model/results để đối chiếu; resume theo §3.10.
 
@@ -299,7 +299,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | R6 | Nhãn PortScan/Infiltration phụ thuộc quyết định schedule | Khó bảo vệ | Decision log §1 + QA report + tham chiếu trang CIC |
 | R7 | Leakage kiểm tra mới ở mức synthetic + audit artifact | Khó phát hiện lỗi mới | `tests/test_leakage.py` + audit real artifact (428 checks) |
 | R8 | Code chưa commit | Mất lịch sử/khó chấm | Task A4, H7 |
-| R9 | One-class AE + detector không tách attack (TPR 7–15% ở FPR 2–6%) | Không tái hiện 99% của paper | Resume §3.10: standardization/loss weighting/bottleneck; nếu vẫn thấp thì báo cáo partial + RF upper bound |
+| R9 | One-class AE + detector không tách attack (TPR 7–15% ở FPR 2–6%) | Không tái hiện 99% của paper | Đã thử full-graph/large-subgraph/K_max/PE/bottleneck; xem `REPRO_AUDIT.md`; chốt báo cáo partial + RF same-session/cross-day |
 
 ---
 
