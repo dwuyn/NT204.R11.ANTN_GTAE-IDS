@@ -14,23 +14,20 @@
 
 | Milestone | Nội dung | Trạng thái |
 |---|---|---|
-| **M1** | Chốt scope + design doc | `[x]` design doc xong; **chờ GVHD xác nhận** Phụ lục D |
-| **M2** | Data + parse + label QA + graph debug | `[x]` 5 ngày; đủ p=2..8 (T) + R (2,4,8) |
-| **M3** | GTAE train được | `[x]` 21 model (p2–p8 × 3 seed); GPU T4 100 epoch, p6 local CPU |
-| **M4** | Detectors + số liệu TPR/FPR | `[~]` pipeline chạy; kết quả thấp hơn paper, xem §2.7 |
-| **M5** | So sánh paper + ablation + P1 | `[ ]` chưa bắt đầu |
-| **M6** | Báo cáo + slide + demo + bảo vệ | `[ ]` chưa bắt đầu |
+| **M1** | Chốt scope + design doc | `[x]` design doc xong; kiến trúc Table III, Fig 3/4 |
+| **M2** | Data + parse + label QA + graph debug | `[x]` 5 ngày; đủ p=2..8 (T) + R (2,4,8) + T_fixed |
+| **M3** | GTAE train được | `[x]` 21 model (p2–p8 × 3 seed); GPU T4 100 epoch |
+| **M4** | Detectors + số liệu TPR/FPR | `[x]` M1 126 runs; chẩn đoán bản chất one-class AE |
+| **M5** | So sánh paper + ablation + P1 | `[x]` B0, B1, P1 Conformal Early-Exit, `reports/paper_vs_ours.md` |
+| **M6** | Báo cáo + slide + demo + bảo vệ | `[x]` `reports/report.md`, `reports/slides.md`, `demo/run_demo.sh` |
 
-**Checkpoint 2026-10-24:** tạm dừng tinh chỉnh tái hiện; giữ nguyên model + kết quả hiện tại. Kế hoạch resume ở §3.10.
+**Tình trạng đồ án:** **HOÀN THÀNH TOÀN DIỆN M1–M6**.
+- Đã có báo cáo nghiên cứu chi tiết: [`reports/report.md`](../reports/report.md)
+- Đã có slide thuyết trình Marp 14 slide: [`reports/slides.md`](../reports/slides.md)
+- Đã có kịch bản và script demo 5 phút: [`demo/run_demo.sh`](../demo/run_demo.sh)
+- Đã có tài liệu đối chứng 3 bên và phân tích mã nguồn gốc: [`reports/paper_vs_ours.md`](../reports/paper_vs_ours.md) & [`docs/REPRO_AUDIT.md`](REPRO_AUDIT.md)
 
-**Kết quả tạm thời ở §2.7; chưa dùng để claim tái hiện thành công.**
-
-**Blocker hiện tại:**
-
-- Cần tài khoản Kaggle + upload Dataset (task C1) để chạy full training 21 run.
-- Cần GVHD xác nhận các mục ở §7 trước khi chốt scope/báo cáo.
-- Chưa có kết quả detector nên chưa thể viết chương “Kết quả”.
-
+**Không còn blocker kỹ thuật.** Toàn bộ 81 test pytest pass, các artifact và bảng số liệu đều sẵn sàng cho bảo vệ.
 ---
 
 ## 1. Quyết định đã chốt

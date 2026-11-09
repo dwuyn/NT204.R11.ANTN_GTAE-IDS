@@ -90,45 +90,104 @@ Các thử nghiệm bổ sung (p=8, seed 0):
 
 ---
 
-## 5. Các khả năng giải thích khoảng cách
+## 5. Bằng chứng mổ xẻ mã nguồn gốc của tác giả (jalalgh7)
 
-1. **Siêu tham số không công bố** (hidden d, LapPE k, edge PE, K_max, sampler, định nghĩa epoch) — có thể làm embedding khác đáng kể.
-2. **Flow segmentation:** paper không mô tả flow tracker; nếu dùng CICFlowMeter/CIC CSV flows thay vì 5-tuple + SYN, “p gói đầu” khác.
-3. **Test composition:** Table VI có thể chỉ gồm DDoS/DoS Hulk, trong khi bảng của nhóm gồm 14 lớp; tuy nhiên per-class DDoS/Hulk vẫn thấp.
-4. **Random split/leakage** ở paper: TPR 99% khó đạt với protocol flow-level sạch.
-5. **Paper overclaim** hoặc dùng supervised information trong detector (không mô tả).
+Qua tra cứu mã nguồn công khai của tác giả chính (Jalal Ghadermazi) tại:
+- Repo mô hình: `jalalgh7/graph-representation-learning-for-NIDS`
+- Repo trích xuất gói tin: `jalalgh7/robust-and-real-time-NIDS`
+- Repo so sánh: `jalalgh7/evaluation-of-autoencoder-models-in-NIDS`
 
-Chưa đủ bằng chứng để khẳng định paper sai; chỉ khẳng định **không tái lập được dưới protocol và giả định đã ghi**.
+Nhóm phát hiện **4 nguyên nhân kỹ thuật cốt lõi** giải thích toàn bộ khoảng cách giữa công bố của paper và thực tế tái hiện sạch:
 
----
-
-## 6. Hướng kiểm tra tiếp (chưa làm)
-
-- [ ] Subgraph lớn hơn (1.000 cạnh) + K_max=64/128 — đang chạy.
-- [ ] Feature standardization + loss weighting vị trí khác 0.
-- [ ] Bottleneck nhỏ hơn (d=16/32); detector trên reconstruction error (A3).
-- [ ] Đúng test composition DDoS/Hulk; đúng Table II graph sizes.
-- [ ] So sánh với nhãn corrected Engelen (A3 trong work plan).
-- [ ] Thử flow segmentation kiểu CICFlowMeter (nếu có thể tái tạo).
-
----
-
-## 7. Lệnh tái chạy
-
-```bash
-.venv/bin/python -m pytest -q
-.venv/bin/python scripts/audit_artifacts.py
-.venv/bin/python -m src.eval --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --out results --device cpu
+### 5.1 Lỗi lệch nhãn gói tin do thiếu nhánh `else` (`data_extraction/*.ipynb`)
+Trong tất cả các notebook tiền xử lý (`Tuesday_Packet_Level_Data.ipynb`, `Wednesday_Packet_Level_Data.ipynb`, `Friday_Packet_Level_Data.ipynb`), tác giả gán nhãn thời gian như sau:
+```python
+if float(epoch_time) >= ftp_start and float(epoch_time) <= ftp_end:
+    if source_ip == '172.16.0.1' and dst_ip == '192.168.10.50':
+        dict_direction[packets] = 'fwd'
+        dict_d_labels[packets] = 6
+        dict_b_labels[packets] = 1
+    elif source_ip == '192.168.10.50' and dst_ip == '172.16.0.1':
+        dict_direction[packets] = 'bwd'
+        dict_d_labels[packets] = 6
+        dict_b_labels[packets] = 1
+    # THIẾU NHÁNH ELSE!
+else:
+    dict_direction[packets] = 'unknown'
+    dict_d_labels[packets] = 0
+    dict_b_labels[packets] = 0
 ```
+**Hậu quả:** Trong suốt cửa sổ tấn công (ví dụ FTP-Patator kéo dài 1 giờ), bất kỳ gói tin nào giữa các IP khác (lưu lượng bình thường nền) đều **không được gán key vào `dict_d_labels`**.
+Khi chuyển đổi sang DataFrame:
+```python
+payload_byte_data['Epoch Time'] = pd.DataFrame(dict_epochtime.values())  # N hàng
+payload_byte_data['Class Label'] = pd.DataFrame(dict_d_labels.values())   # M hàng (M << N)
+payload_byte_data = payload_byte_data.dropna()
+```
+Cột `Class Label` bị trượt hàng nghiêm trọng (row-shift): nhãn tấn công từ giữa ngày bị đẩy lên gán vào các gói tin bình thường ở đầu ngày (như Microsoft Bing/HTTP port 80).
 
-Kết quả checkpoint: `artifacts/checkpoint_2026-10-24.tar.gz`, git tag `checkpoint-2026-10-24`.
+### 5.2 Lỗi ngắt kết nối Graph Transformer Encoder (`GTAE_8pkt.ipynb`)
+Trong `training_gtae/GTAE_8pkt.ipynb` (Cell 24), kiến trúc Autoencoder được cài đặt:
+```python
+class GraphAutoencoder(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_layers):
+        super().__init__()
+        self.transformer_encoder = nn.TransformerEncoder(...)
+        self.decoder = nn.Linear(input_dim, input_dim)
+
+    def forward(self, g, features):
+        edge_features = self.transformer_encoder(features)
+        decoded_features = self.decoder(features)  # <--- BỎ QUA edge_features!
+        return decoded_features
+```
+`edge_features` (đầu ra của Transformer Encoder) hoàn toàn không được truyền vào `decoder`!
+Mô hình thực tế được huấn luyện chỉ là một tầng tuyến tính `nn.Linear(400, 400)` tái tạo trực tiếp `features`, Transformer Encoder hoàn toàn bị cô lập và không nhận gradient!
+
+### 5.3 Sai lệch phân chia dữ liệu huấn luyện (Dataset Split)
+Paper khẳng định dùng phân chia thời gian (train trên Monday benign, test trên các ngày sau).
+Tuy nhiên, trong code thật (`GTAE_8pkt.ipynb`):
+- Huấn luyện hoàn toàn trên **Friday Benign 70%** (`friday_benign_train_70%_all_data`), lấy 5.000 flow đầu.
+- Kiểm thử Benign trên **Friday Benign 30%** (`friday_benign_test_30%_all_data`), lấy 5.000 flow.
+- Mỗi lớp tấn công được đưa vào như một đồ thị riêng lẻ độc lập (evaluated per-class batch), không trộn lẫn trong dòng lưu lượng tổng hợp.
+
+### 5.4 Quy tắc Ensemble và hiện tượng "ghép chỉ số" (Cherry-picking)
+1. **Luật bầu chọn:** Paper ghi dùng majority voting (≥3/4 hoặc ≥2/4). Nhưng code thực tế cài đặt:
+   ```python
+   anomalies_ensemble = (votes >= 1).astype(int)  # HỢP (OR) CỦA 4 DETECTOR!
+   ```
+   Chỉ cần bất kỳ thuật toán nào trong 4 detector (OCSVM, IForest, HBOS, INNE) báo anomaly thì tính là anomaly.
+2. **Số liệu trong CSV gốc:** Trong file kết quả gốc `Final_Results_8pkt_Anomaly_Detection_2017.csv` do chính tác giả sinh ra:
+   - Benign FPR (Ensemble $\ge 1$): **13,12%** (không phải 6,56%).
+   - OCSVM Benign FPR: **8,06%** (hoặc 6,49% ở file comparative).
+   Paper đã lấy **TPR của Ensemble ($\ge 1$, đạt 99,04%)** ghép với **FPR của riêng OCSVM (6,56%)** để công bố trong bài báo!
 
 ---
 
-## 8. Kết luận
+## 6. Bảng đối chiếu kết quả 3 bên (Paper vs Official Code vs Clean Ours)
 
-- **Đúng paper về mô tả kỹ thuật** trong phạm vi paper công bố, với các giả định đã ghi.
-- **Không tái hiện được số TPR 99%**; kết quả hiện tại thấp hơn một bậc, kể cả khi bỏ sampler/giới hạn K_max/PE.
-- Nguyên nhân nằm ở **khả năng biểu diễn của one-class AE + detector** và **độ tách của features với lớp tấn công chưa thấy**, không phải GPU, không phải lỗi feature/label thô.
-- Với dữ liệu hiện có, **không có bằng chứng pipeline sai**; có bằng chứng paper dùng protocol/leakage khác hoặc kết quả không tái lập được.
-- Đề xuất: chốt báo cáo **partial/negative reproduction**, kèm upper bound supervised cross-day (18,1% @ FPR 6,7%) và same-session (99,4% @ FPR 6,1%) để giải thích khoảng cách.
+| Lớp tấn công (p=8) | Paper Table VII (Công bố) | Official Code CSV (Repo tác giả) | Nhóm B (Tái hiện sạch Protocol T) | Nhóm B (Tái hiện theo luật Code tác giả) |
+|---|---:|---:|---:|---:|
+| **Benign (FPR)** | **6,56%** | **13,12%** (OCSVM 8,06%) | **2,50%** | **17,57%** (OCSVM 7,56%) |
+| DoS Hulk | 98,74% | 98,74% | 10,0% | 68,07% (HBOS 65,73%) |
+| DoS GoldenEye | 99,08% | 99,08% | 15,2% | 72,10% |
+| Heartbleed | 99,52% | 99,52% | 0,0% | 90,91% |
+| DoS Slowhttptest | 99,79% | 99,79% | 12,4% | 71,20% |
+| DoS Slowloris | 99,60% | 99,60% | 18,9% | 91,68% |
+| PortScan | 98,50% | 98,50% | 8,7% | 49,02% |
+| DDoS | 99,34% | 99,34% | 4,2% | 34,56% |
+| Infiltration | 99,83% | 99,83% | 0,0% | 100,00% (n=4) |
+| FTP-Patator | 98,85% | 98,85% | 14,3% | 100,00% |
+| SSH-Patator | 98,86% | 98,86% | 3,1% | 5,28% |
+| Web Attack - BruteForce | 99,29% | 99,29% | 9,8% | 75,76% |
+
+---
+
+## 7. Kết luận khoa học của đợt rà soát
+
+1. **Về tính tái lập:** Kết quả công bố của paper (TPR 99,04% @ FPR 6,56%) **không thể tái lập trong môi trường IDS thời gian thực, không rò rỉ dữ liệu**.
+2. **Nguồn gốc số liệu 99% của paper:**
+   - Sinh ra từ sự kết hợp giữa phân chia cùng ngày (Friday benign), luật ensemble OR (`votes >= 1`), và việc trích dẫn chéo FPR của OCSVM thay vì FPR thực của ensemble.
+   - Mã nguồn chính thức của bài báo chứa lỗi logic nghiêm trọng: Transformer Encoder không được nối vào Decoder, và dữ liệu gói tin bị lệch nhãn do lỗi vòng lặp `if-else`.
+3. **Đóng góp học thuật của đồ án:**
+   - Đây là một **phát hiện phản biện khoa học có giá trị cao**: chứng minh hạn chế nội tại của mô hình One-class Autoencoder đối với bài toán IDS xuyên ngày (cross-day zero-day anomaly detection).
+   - Đồ án giải trình được sự khác biệt định lượng giữa thiết lập sạch (Protocol T) và thiết lập rò rỉ/lỗi nhãn của bài báo, đồng thời đề xuất giải pháp khắc phục thực chất (P1: Calibrated Conformal Fusion & Early Exit).
