@@ -323,18 +323,22 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 
 ## 10. Kết quả Thực nghiệm của P1 (Early-Exit)
 
-*Đánh giá trên quần thể cố định T_fixed (30.907 luồng, trung bình 3 seed):*
+*Đánh giá trên quần thể cố định T_fixed (30.907 luồng, trung bình 3 seed, calibration 40% = 800 flow):*
 
 | $\alpha$ mục tiêu | Phương pháp | TPR thực đo | FPR thực đo | APD Tấn công | APD Bình thường | Tỉ lệ dừng sớm |
 |---|---|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 14,2% | **1,1%** | 5,6 pkts | 7,9 pkts | 48,2% |
-| **0,05** | Fisher | **24,6%** | **4,8%** | **4,8 pkts** | 7,6 pkts | **65,4%** |
-| **0,10** | Fisher | 33,8% | **9,7%** | 4,1 pkts | 7,2 pkts | 77,1% |
-| **0,05** | Bonferroni | 21,3% | **3,9%** | 5,1 pkts | 7,7 pkts | 59,8% |
+| **0,01** | Fisher | 39,65% | 11,55% | 6,43 pkts | 7,44 pkts | 39,44% |
+| **0,05** | Fisher | **47,58%** | **18,07%** | **5,90 pkts** | 7,14 pkts | **47,39%** |
+| **0,10** | Fisher | 51,32% | 22,91% | 5,72 pkts | 6,93 pkts | 51,08% |
+| **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% |
+| **0,05** | Bonferroni | **16,49%** | **3,67%** | 7,57 pkts | 7,89 pkts | 15,23% |
+| **0,10** | Bonferroni | **23,07%** | **6,13%** | 7,34 pkts | 7,79 pkts | 21,75% |
 
 ### Điểm nhấn quan trọng:
-- **Kiểm soát chặt chẽ FPR:** Tại $\alpha=0,05$, FPR thực đo là **4,8%** (tuân thủ lý thuyết $\le 5\%$).
-- **Tiết kiệm 40% trễ gói tin:** **65,4%** tấn công bị chặn đứng trước $p=8$ (trung bình chỉ cần 4,8 gói tin).
+- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,67%** và TPR **16,49%**; $\alpha=0,10$ đạt FPR **6,13%** và TPR **23,07%**.
+- **Fisher không kiểm soát FPR:** TPR 47,6% nhưng FPR **18,07%** do 4 detector tương quan; chỉ dùng làm exploratory.
+- **TPR@FPR=1%:** Bonferroni 0%, Fisher 5,14%, đều thấp hơn M1 (9,42%) — P1 chưa thắng ở vùng FPR thấp.
+- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,57 gói**; $\alpha=0,10$ xuống **7,34 gói**.
 
 ---
 
@@ -344,12 +348,14 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 |---|---|---|---:|---:|---:|
 | **Paper Table VI** | GTAE-IDS | Random / Same-day | **99,04%** | **6,56%** | — |
 | **Official Repo Code** | Disconnected Linear AE | Friday 70/30 (OR vote) | **98,74%** | **13,12%** | — |
-| **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T (Sạch) | **11,8%** | **3,2%** | **0,68** |
-| **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **9,4%** | **2,8%** | **0,66** |
+| **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T (Sạch) | **0,50%** | **1,22%** | **0,698** |
+| **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **6,29%** | **2,29%** | **0,595** |
 | **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,5%** | **2,5%** | **0,67** |
-| **P1: Conformal Early-Exit** | GTAE + Conformal Fusion | Temporal T (Sạch, $\alpha=0.05$) | **24,6%** | **4,8%** | **0,86** |
+| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,49%** | **3,67%** | **0,652** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
+
+*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,42%).*
 
 ---
 
@@ -378,9 +384,9 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
    - Không dừng lại ở việc báo cáo kết quả tái hiện âm tính, nhóm đã đào sâu và phát hiện **4 sai sót kỹ thuật** trong mã nguồn mở của bài báo IEEE TIFS 2025.
    - Làm sáng tỏ nghịch lý: mô hình One-class Autoencoder học đặc trưng header không thể đạt 99% TPR xuyên ngày nếu không rò rỉ phân phối.
 2. **Kỹ thuật phần mềm chuẩn mực:**
-   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 81 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
+   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 82 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
 3. **Đóng góp giải pháp mới (P1):**
-   - Đưa ra khung lý thuyết Conformal Prediction và thuật toán Sequential Early-Exit, giúp giảm 40% trễ gói tin trong khi kiểm soát chặt chẽ tỷ lệ báo động giả.
+   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,67%), TPR 16,49%, APD 7,57 gói (giảm 5,4%). Fisher giảm APD còn 5,90 gói nhưng FPR 18,07% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
 
 ---
 

@@ -1,6 +1,6 @@
 # GTAE-IDS — Work Plan & Tiến độ (live)
 
-**Cập nhật:** 2026-10-24
+**Cập nhật:** 2026-11-10
 **Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & cải tiến GTAE-IDS
 **Paper neo:** J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, "GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection," *IEEE TIFS*, vol. 20, pp. 4026–4041, 2025, doi: 10.1109/TIFS.2025.3557741.
 **Tài liệu kỹ thuật chi tiết:** [`GTAE-IDS_Research_docs.md`](GTAE-IDS_Research_docs.md) — file này **thay thế trạng thái WBS §7** và là nguồn duy nhất theo dõi tiến độ.
@@ -18,16 +18,19 @@
 | **M2** | Data + parse + label QA + graph debug | `[x]` 5 ngày; đủ p=2..8 (T) + R (2,4,8) + T_fixed |
 | **M3** | GTAE train được | `[x]` 21 model (p2–p8 × 3 seed); GPU T4 100 epoch |
 | **M4** | Detectors + số liệu TPR/FPR | `[x]` M1 126 runs; chẩn đoán bản chất one-class AE |
-| **M5** | So sánh paper + ablation + P1 | `[x]` B0, B1, P1 Conformal Early-Exit, `reports/paper_vs_ours.md` |
-| **M6** | Báo cáo + slide + demo + bảo vệ | `[x]` `reports/report.md`, `reports/slides.md`, `demo/run_demo.sh` |
+| **M5** | So sánh paper + ablation + P1 | `[~]` B0, B1, P1 (calibration 40%), `reports/paper_vs_ours.md`; thiếu ablation/B2/A3 |
+| **M6** | Báo cáo + slide + demo + bảo vệ | `[~]` report/slides/demo có; đang đồng bộ số P1, chưa tag |
 
-**Tình trạng đồ án:** **HOÀN THÀNH TOÀN DIỆN M1–M6**.
+**Tình trạng đồ án:** **ĐÃ HOÀN THÀNH PHẦN LỚN M1–M6**.
 - Đã có báo cáo nghiên cứu chi tiết: [`reports/report.md`](../reports/report.md)
 - Đã có slide thuyết trình Marp 14 slide: [`reports/slides.md`](../reports/slides.md)
 - Đã có kịch bản và script demo 5 phút: [`demo/run_demo.sh`](../demo/run_demo.sh)
 - Đã có tài liệu đối chứng 3 bên và phân tích mã nguồn gốc: [`reports/paper_vs_ours.md`](../reports/paper_vs_ours.md) & [`docs/REPRO_AUDIT.md`](REPRO_AUDIT.md)
+- Đã có báo cáo P1 sinh tự động từ CSV: [`reports/P1.md`](../reports/P1.md)
 
-**Không còn blocker kỹ thuật.** Toàn bộ 81 test pytest pass, các artifact và bảng số liệu đều sẵn sàng cho bảo vệ.
+**Còn lại trước khi chốt:** ablation A1–A6/B2, nhãn corrected Engelen (A3), tag H7; số P1 đã được đồng bộ lại theo `results/P1_summary.csv`.
+
+**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 82 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
 ---
 
 ## 1. Quyết định đã chốt
@@ -48,6 +51,7 @@
 | Kết thúc flow | FIN/RST **không** kết thúc ngay; tách khi idle >120 s hoặc SYN mới sau FIN/RST | Sửa lỗi 68% → 0,7% UNCERTAIN |
 | Định dạng pcap | pcapng | CIC phát hành pcapng dù đuôi `.pcap` |
 | Graph artifact | `.npz` + `day` cho từng edge | `flow_id` chỉ unique trong ngày; đã thêm `day` |
+| P1 calibration | 40% của `train2` = 800 flow | 20% = 400 flow không đủ để Bonferroni α=0,05 alert; Fisher chỉ exploratory |
 | Test | Không commit pcap; commit code/config/report | `data/`, `experiments/`, `*.pt`, `*.npy` bị ignore |
 
 ---
@@ -112,7 +116,7 @@ Protocol R dùng cùng bộ đếm test (cap 5.000/class) nhưng train1/train2 l
 
 ### 2.5 Hạ tầng kiểm thử
 
-- [x] **76 pytest** pass (thêm `test_leakage.py`, `test_detectors.py`).
+- [x] **82 pytest** pass (thêm `test_p1.py`, `test_leakage.py`, `test_detectors.py`).
 - [x] `scripts/audit_artifacts.py`: **428/428 checks** — gồm kiểm tra chéo packet↔flow, re-encode toàn bộ edge, disjoint split, rebuild deterministic, protocol R, fixed population.
 - [x] SHA256 toàn bộ raw OK.
 - [x] `.gitignore` chặn pcap/graph/model; `reports/` được phép commit.
@@ -130,16 +134,21 @@ Protocol R dùng cùng bộ đếm test (cap 5.000/class) nhưng train1/train2 l
 | `reports/crosscheck_{day}.json` | Đối chiếu CSV |
 | `reports/qa_labeling.md` | QA tổng hợp, sinh tự động |
 | `reports/graph_stats.md` | Thống kê graph T/R/T_fixed |
-| `src/` | 10 module pipeline |
-| `tests/` | 9 file test |
+| `reports/P1.md` | Báo cáo P1 sinh tự động từ CSV |
+| `src/` | 15 module pipeline |
+| `tests/` | 11 file test |
 | `scripts/audit_artifacts.py` | Audit tái chạy được |
 | `scripts/make_qa_report.py` | Sinh QA markdown |
 | `scripts/make_graph_stats.py` | Sinh graph stats |
+| `scripts/make_p1_report.py` | Sinh `reports/P1.md` từ `results/P1_summary.csv` |
 | `scripts/train_all.py` | Train 7 p × 3 seed, có resume |
 | `configs/data.yaml` | Quyết định + tham số |
 | `configs/cicids2017_schedule.yaml` | 18 cửa sổ tấn công |
+| `requirements.txt` | Pin dependency Python 3.11 |
 | `results/M1_summary.csv` | Bảng eval 126 dòng (21 model × 6 detector/ensemble) |
 | `results/M1_p{p}_seed{s}.json` | Chi tiết TPR/FPR/AUROC/per-class |
+| `results/P1_summary.csv` | P1 theo seed/alpha/method; có AUROC + TPR@FPR=1% |
+| `results/P1_meta.json` | Calibration fraction, seeds, alphas, n_calib |
 | `experiments/T/p{p}/seed{s}/` | Model + log (không commit) |
 | `kaggle/`, `kaggle_long/` | Kernel metadata + script train GPU |
 
@@ -159,7 +168,20 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 **Chẩn đoán:** RandomForest supervised trên **cùng edge features** (cùng ngày/phiên) đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972); nhưng **cross-day/open-class** (train Tue/Wed → test Thu/Fri) chỉ **18,1%** ở FPR 6,7% (AUROC 0,924). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; chưa tái hiện 99% của paper. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
 
-**Quyết định:** tạm dừng tinh chỉnh; giữ model/results để đối chiếu; resume theo §3.10.
+**Baseline P1 (p=8, mean 3 seed):**
+
+| Phương pháp | TPR | FPR | AUROC | TPR@FPR=1% |
+|---|---:|---:|---:|---:|
+| M1 GTAE ensemble tie | 11,54% | 2,52% | 0,668 | 9,42% |
+| B0 raw vector ensemble tie | 0,50% | 1,22% | 0,698 | 2,13% |
+| B1 MLP-AE ensemble tie | 6,29% | 2,29% | 0,595 | 6,95% |
+| P1 Bonferroni α=0,05 | 16,49% | 3,67% | 0,652 | 0,00% |
+| P1 Bonferroni α=0,10 | 23,07% | 6,13% | 0,652 | 0,00% |
+| P1 Fisher α=0,05 | 47,58% | 18,07% | 0,641 | 5,14% |
+
+P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm soát FPR và tăng TPR so với M1 ở vùng FPR ~3–4%, nhưng **chưa vượt M1 tại FPR=1%**; Fisher có TPR cao nhưng FPR không kiểm soát. Chi tiết sinh tự động: [`reports/P1.md`](../reports/P1.md).
+
+**Quyết định:** giữ kết quả trung thực; ưu tiên ablation/B2/A3 nếu còn thời gian; không tinh chỉnh để chạy đua con số paper.
 
 ---
 
@@ -172,7 +194,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | A1 | [x] Sinh `reports/qa_labeling.md` từ JSON | Markdown QA | Đủ bảng QA 5 ngày + giải thích ngưỡng | — | 0,5 |
 | A2 | [x] Viết `tests/test_leakage.py` | Test | (i) không IP/port trong feature; (ii) split disjoint; (iii) train chỉ benign | — | 0,5 |
 | A3 | [ ] Nhãn sửa Engelen eval-only | `src/corrected_labels.py` + report | Map được bằng 5-tuple; báo thêm cột “corrected”, **không train lại** | A1 | 1 |
-| A4 | [ ] Commit baseline code | Git commit | `pytest` xanh, data không bị track | — | 0,5 |
+| A4 | [x] Commit baseline code | Git commit | `pytest` xanh, data không bị track | — | 0,5 |
 
 ### Phase B — Đủ graph cho toàn bộ p & protocol R (xong)
 
@@ -239,7 +261,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | F1 | Conformal calibration | `src/calibrate.py` | FPR ≤ α trên calibration; báo FPR thực đo | D4 | 1,5 |
 | F2 | Early exit theo p | `src/early_exit.py` | Dừng khi p-value ≤ α; lưu p_decision | F1 | 1,5 |
 | F3 | Chạy P1 3 seed | `results/P1*.csv` | TPR@FPR cố định + số gói trung bình đến quyết định | F2 | 1,5 |
-| F4 | So sánh P1 vs M1 | `reports/P1.md` | Kết quả dương/âm đều báo; nêu drift | F3 | 1 |
+| F4 | [x] So sánh P1 vs M1 | `reports/P1.md` | Sinh tự động từ CSV; nêu drift và giới hạn calibration | F3 | 1 |
 
 ### Phase G — MAY (2–4 ngày, chỉ làm nếu còn thời gian)
 
@@ -253,7 +275,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 | ID | Việc | Output | Acceptance | Dep | Est |
 |---|---|---|---|---|---|
-| H1 | README 1 lệnh train + 1 lệnh eval | `README.md` | Chạy từ máy sạch sau khi có data | D3 | 0,5 |
+| H1 | [x] README 1 lệnh train + 1 lệnh eval | `README.md` | Đã thêm `PYTHONPATH=.`, `requirements.txt`, lệnh eval/P1 | D3 | 0,5 |
 | H2 | Notebook/script Kaggle | `notebooks/` | Tái lập được kết quả | C3 | 0,5 |
 | H3 | Báo cáo | `reports/report.pdf` | Đủ outline §8.1 | M5 | 4 |
 | H4 | Slide 14 trang | `reports/slides.pdf` | Đúng §8.2 | H3 | 1 |
@@ -295,7 +317,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | R5 | Siêu tham số paper không công bố (k, d, sampler, hòa phiếu) | Lệch kết quả | Ghi giả định; ablation k/K_max; báo cả 2 luật vote |
 | R6 | Nhãn PortScan/Infiltration phụ thuộc quyết định schedule | Khó bảo vệ | Decision log §1 + QA report + tham chiếu trang CIC |
 | R7 | Leakage kiểm tra mới ở mức synthetic + audit artifact | Khó phát hiện lỗi mới | `tests/test_leakage.py` + audit real artifact (428 checks) |
-| R8 | Code chưa commit | Mất lịch sử/khó chấm | Task A4, H7 |
+| R8 | Code chưa commit/tag đầy đủ | Mất lịch sử/khó chấm | A4 đã commit; H7 còn tag + AI disclosure |
 | R9 | One-class AE + detector không tách attack (TPR 7–15% ở FPR 2–6%) | Không tái hiện 99% của paper | Đã thử full-graph/large-subgraph/K_max/PE/bottleneck; xem `REPRO_AUDIT.md`; chốt báo cáo partial + RF same-session/cross-day |
 
 ---
@@ -312,10 +334,10 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 - [ ] README có đúng 1 lệnh train + 1 lệnh eval.
 - [x] `tests/test_leakage.py` pass.
 - [x] `reports/qa_labeling.md` sinh tự động.
-- [x] 73 pytest + 386 audit checks pass.
-- [ ] Bảng “paper vs ours” + giải thích chênh lệch.
-- [ ] Ablation + P1 + 3 seed.
-- [ ] Báo cáo/slide/demo.
+- [x] 82 pytest + 428 audit checks pass.
+- [x] Bảng “paper vs ours” + giải thích chênh lệch.
+- [~] Ablation + P1 + 3 seed (P1 xong; ablation/B2 còn thiếu).
+- [x] Báo cáo/slide/demo.
 
 ---
 
