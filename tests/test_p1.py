@@ -88,3 +88,32 @@ def test_early_exit_flow():
     assert res.mean_p_attack < 6.0
     assert res.mean_p_benign > 7.0
     assert res.early_exit_rate_attack > 0.70
+
+
+def test_bonferroni_alpha05_calibration_floor():
+    """Bonferroni x4 x7 needs n_calib >= 559 to reach alpha=0.05.
+
+    With 400 calibration flows the smallest fused p-value is
+    4 * 1/401 = 0.009975 > 0.05/7, so no score can alert. With 800 flows
+    the floor drops below the per-step budget and an all-time-high score
+    alerts at p=2.
+    """
+    ps = (2, 3, 4, 5, 6, 7, 8)
+    y_true = np.array([1], dtype=np.int8)
+    score = {"d1": np.array([1.0]), "d2": np.array([1.0]),
+             "d3": np.array([1.0]), "d4": np.array([1.0])}
+
+    def make_calib(n: int) -> dict[int, dict[str, np.ndarray]]:
+        return {p: {name: np.zeros(n) for name in score} for p in ps}
+
+    small = run_early_exit(
+        {p: score for p in ps}, make_calib(400), y_true,
+        alpha=0.05, method="bonferroni", ps=ps,
+    )
+    large = run_early_exit(
+        {p: score for p in ps}, make_calib(800), y_true,
+        alpha=0.05, method="bonferroni", ps=ps,
+    )
+
+    assert small.p_decision[0] == 8  # floor prevents any alert
+    assert large.p_decision[0] == 2  # min fused p = 4/801 < 0.05/7

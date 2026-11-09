@@ -1,28 +1,35 @@
-"""Run Baseline B0, B1, and Proposal P1 experiments and generate summary reports.
+"""Run Baseline B0, B1, and Proposal P1 experiments and write summary CSVs.
 
 Tasks:
 1. B0: Raw feature vector (50*p) + PyOD detectors.
 2. B1: MLP-AE (bottleneck latent z=64) + PyOD detectors.
-3. P1: Conformal Calibration and Early-Exit sequential testing (p=2..8).
-4. Generates:
+3. P1: Conformal calibration and early-exit sequential testing (p=2..8).
+4. Outputs:
    - results/B0_summary.csv
    - results/B1_summary.csv
    - results/P1_summary.csv
-   - reports/paper_vs_ours.md
+
+Afterwards run ``python scripts/make_p1_report.py`` to regenerate
+``reports/P1.md`` from the measurement CSVs.
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
 import torch
+from sklearn.metrics import roc_auc_score, roc_curve
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.calibrate import calibrate_and_fuse
 from src.detectors import (
     DETECTOR_NAMES,
     build_detectors,
@@ -177,8 +184,18 @@ def run_p1(
     alphas: tuple[float, ...] = (0.01, 0.05, 0.10),
     seeds: tuple[int, ...] = (0, 1, 2),
     ps: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8),
+    calibration_fraction: float = 0.4,
 ) -> list[dict]:
-    """P1: Sequential Early-Exit evaluation using Conformal calibration on T_fixed."""
+    """P1: Sequential Early-Exit evaluation using conformal calibration on T_fixed.
+
+    ``calibration_fraction`` controls the benign split of ``train2`` used to
+    estimate conformal p-values. The detector fit uses the remainder. The
+    default 0.4 (800 flows of 2,000) is large enough for Bonferroni fusion to
+    reach alpha=0.05 across seven packet budgets; 0.2 leaves only 400 flows and
+    makes that operating point mathematically unreachable.
+    """
+    if not 0.0 < calibration_fraction < 1.0:
+        raise ValueError("calibration_fraction must be in (0, 1)")
     records = []
 
     for seed in seeds:
@@ -203,7 +220,7 @@ def run_p1(
 
             rng = np.random.default_rng(seed)
             perm = rng.permutation(len(z_train))
-            n_calib = max(1, int(len(z_train) * 0.2))
+            n_calib = max(1, int(len(z_train) * calibration_fraction))
             calib_idx = perm[:n_calib]
             fit_idx = perm[n_calib:]
 
@@ -226,6 +243,14 @@ def run_p1(
                     method=method,
                     ps=ps,
                 )
+                # Lowest fused p-value across packet budgets is the P1 anomaly
+                # score; use it for threshold-free ranking metrics.
+                min_p = np.min(np.vstack([res.fused_pvalues[p] for p in ps]), axis=0)
+                ranking_score = 1.0 - min_p
+                auroc = float(roc_auc_score(y_true, ranking_score))
+                fpr_curve, tpr_curve, _ = roc_curve(y_true, ranking_score)
+                idx = int(np.searchsorted(fpr_curve, 0.01, side="right") - 1)
+                tpr_at_fpr_1pct = float(tpr_curve[max(idx, 0)])
                 records.append({
                     "seed": seed,
                     "alpha": alpha,
@@ -236,104 +261,101 @@ def run_p1(
                     "mean_p_benign": round(res.mean_p_benign, 2),
                     "mean_p_total": round(res.mean_p_total, 2),
                     "early_exit_rate_attack": round(res.early_exit_rate_attack, 4),
+                    "auroc": round(auroc, 4),
+                    "tpr_at_fpr_1pct": round(tpr_at_fpr_1pct, 4),
                 })
     return records
 
 
-def write_paper_vs_ours(reports_dir: Path, results_dir: Path):
-    """Write comprehensive comparison table report."""
-    md_content = """# Bảng đối chiếu: Paper vs Baseline vs GTAE-IDS vs P1
-
-**Cập nhật:** 2026-10-25
-**Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & Cải tiến GTAE-IDS
-**Paper:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026–4041, 2025.
-
----
-
-## 1. Bảng so sánh tổng hợp các phương pháp (p = 8)
-
-| Phương pháp | Loại mô hình | Phân chia dữ liệu | Luật quyết định | TPR | FPR | AUROC | Ghi chú |
-|---|---|---|---|---:|---:|---:|---|
-| **Paper Table VI** | Graph Transformer AE | Random / Same-day | Majority vote | **99,04%** | **6,56%** | — | Ghép TPR Ensemble với FPR OCSVM |
-| **Official Repo Code** | Disconnected Linear AE | Friday 70/30 | Union (votes $\ge 1$) | **98,74%** | **13,12%** | — | Code tác giả `Final_Results_8pkt` |
-| **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **11,8%** | **3,2%** | **0,68** | Không có Autoencoder hay Đồ thị |
-| **B1: MLP-AE** | Dense AE (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **9,4%** | **2,8%** | **0,66** | AE chuẩn nén 400d → 64d |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **11,5%** | **2,5%** | **0,67** | Tái hiện sạch đúng mô tả paper |
-| **M1 (Official Rules)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | **72,1%** | **17,6%** | **0,89** | Chạy trên luồng và luật của code tác giả |
-| **P1: Conformal Early-Exit** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\\pi_{\\text{fused}} \\le \\alpha_p$ | **24,6%** | **4,8%** | **0,86** | $\\alpha=0.05$, APD attack: 4,8 pkts |
-| **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed → Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** | Giới hạn trên phân loại giám sát |
-| **Upper Bound (Same-session RF)** | Random Forest | Same-session (Random) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** | Rò rỉ nhận diện phiên/ngày |
-
----
-
-## 2. Kết quả Proposal P1 (Conformal Calibration & Early Exit)
-
-Proposal P1 giải quyết 3 hạn chế thực tế của GTAE-IDS:
-1. Chuẩn hóa điểm bất thường thành **conformal p-value**, gộp Fisher giúp kiểm soát cận FPR thực nghiệm.
-2. Cơ chế **Early-Exit**: dừng kiểm tra ngay khi p-value $\le \alpha_p$, không cần chờ đủ 8 gói tin.
-3. Đo lường chỉ số **Average Packets to Decision (APD)** và độ trôi phân phối thời gian (temporal drift).
-
-*Bảng kết quả trung bình 3 seed trên tập kiểm thử chuẩn T_fixed (30.907 flow):*
-
-| $\\alpha$ mục tiêu | Phương pháp Fusion | TPR thực đo | FPR thực đo | APD Tấn công (gói) | APD Bình thường (gói) | Tỉ lệ dừng sớm (Attack) |
-|---|---|---:|---:|---:|---:|---:|
-| 0,01 | Fisher | 14,2% | 1,1% | 5,6 pkts | 7,9 pkts | 48,2% |
-| 0,05 | Fisher | 24,6% | 4,8% | 4,8 pkts | 7,6 pkts | 65,4% |
-| 0,10 | Fisher | 33,8% | 9,7% | 4,1 pkts | 7,2 pkts | 77,1% |
-| 0,05 | Bonferroni | 21,3% | 3,9% | 5,1 pkts | 7,7 pkts | 59,8% |
-
-**Nhận xét:**
-- Ở mức $\\alpha = 0,05$, P1 kiểm soát FPR ở mức **4,8%** (bảo đảm lý thuyết $\\le 5\\%$).
-- **65,4%** các luồng tấn công được phát hiện sớm mà không cần chờ đến gói thứ 8, giảm trung bình **40% số gói tin** cần chờ (từ 8 gói xuống 4,8 gói), giúp cải thiện đáng kể tính "thời gian thực" (real-time) cho IDS.
-"""
-    (reports_dir / "paper_vs_ours.md").write_text(md_content, encoding="utf-8")
-    print(f"Saved {reports_dir / 'paper_vs_ours.md'}")
+# Report generation lives in scripts/make_p1_report.py so the measurement
+# CSVs remain the single source of truth. Do not re-add hardcoded tables here.
 
 
-def main():
-    graphs_dir = Path("data/graphs/T")
-    fixed_graphs_dir = Path("data/graphs/T_fixed")
-    experiments_dir = Path("experiments/T")
-    results_dir = Path("results")
-    reports_dir = Path("reports")
+def _write_csv(path: Path, fieldnames: list[str], records: list[dict]) -> None:
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for record in records:
+            writer.writerow({key: record.get(key) for key in fieldnames})
+    print(f"Saved {path}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--graphs", default="data/graphs/T")
+    parser.add_argument("--fixed-graphs", default="data/graphs/T_fixed")
+    parser.add_argument("--models", default="experiments/T")
+    parser.add_argument("--results", default="results")
+    parser.add_argument("--b0-b1-ps", type=int, nargs="+", default=[2, 4, 8])
+    parser.add_argument("--p1-ps", type=int, nargs="+", default=[2, 3, 4, 5, 6, 7, 8])
+    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    parser.add_argument("--alphas", type=float, nargs="+", default=[0.01, 0.05, 0.10])
+    parser.add_argument(
+        "--calibration-fraction",
+        type=float,
+        default=0.4,
+        help="Fraction of train2 used for P1 conformal calibration (default: 0.4).",
+    )
+    parser.add_argument(
+        "--p1-only",
+        action="store_true",
+        help="Skip B0/B1 and only regenerate P1_summary.csv.",
+    )
+    parser.add_argument("--device", default="cpu", choices=["cpu", "cuda", "auto"])
+    args = parser.parse_args(argv)
+
+    if not 0.0 < args.calibration_fraction < 1.0:
+        raise ValueError("--calibration-fraction must be in (0, 1)")
+
+    graphs_dir = Path(args.graphs)
+    fixed_graphs_dir = Path(args.fixed_graphs)
+    experiments_dir = Path(args.models)
+    results_dir = Path(args.results)
     results_dir.mkdir(parents=True, exist_ok=True)
-    reports_dir.mkdir(parents=True, exist_ok=True)
 
-    device = torch.device("cpu")
+    device = torch.device(
+        "cuda" if args.device == "auto" and torch.cuda.is_available()
+        else "cpu" if args.device == "auto" else args.device
+    )
 
-    print("=== Running Baseline B0 (Raw Vector) ===")
-    b0_records = run_b0(graphs_dir)
-    b0_csv = results_dir / "B0_summary.csv"
-    with open(b0_csv, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["p", "seed", "model", "rule", "tpr", "fpr", "precision", "f1", "auroc", "pr_auc", "tpr_at_fpr", "fpr_at_threshold"])
-        writer.writeheader()
-        for r in b0_records:
-            writer.writerow({k: r.get(k) for k in writer.fieldnames})
-    print(f"Saved {b0_csv}")
+    b0_fields = ["p", "seed", "model", "rule", "tpr", "fpr", "precision", "f1", "auroc", "pr_auc", "tpr_at_fpr", "fpr_at_threshold"]
+    if not args.p1_only:
+        print("=== Running Baseline B0 (Raw Vector) ===")
+        b0_records = run_b0(graphs_dir, ps=tuple(args.b0_b1_ps), seeds=tuple(args.seeds))
+        _write_csv(results_dir / "B0_summary.csv", b0_fields, b0_records)
 
-    print("=== Running Baseline B1 (MLP-AE) ===")
-    b1_records = run_b1(graphs_dir)
-    b1_csv = results_dir / "B1_summary.csv"
-    with open(b1_csv, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["p", "seed", "model", "rule", "tpr", "fpr", "precision", "f1", "auroc", "pr_auc", "tpr_at_fpr", "fpr_at_threshold"])
-        writer.writeheader()
-        for r in b1_records:
-            writer.writerow({k: r.get(k) for k in writer.fieldnames})
-    print(f"Saved {b1_csv}")
+        print("=== Running Baseline B1 (MLP-AE) ===")
+        b1_records = run_b1(graphs_dir, ps=tuple(args.b0_b1_ps), seeds=tuple(args.seeds))
+        _write_csv(results_dir / "B1_summary.csv", b0_fields, b1_records)
 
     print("=== Running Proposal P1 (Conformal Early Exit) ===")
-    p1_records = run_p1(experiments_dir, fixed_graphs_dir, device=device)
-    p1_csv = results_dir / "P1_summary.csv"
-    with open(p1_csv, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["seed", "alpha", "method", "tpr", "fpr", "mean_p_attack", "mean_p_benign", "mean_p_total", "early_exit_rate_attack"])
-        writer.writeheader()
-        for r in p1_records:
-            writer.writerow(r)
-    print(f"Saved {p1_csv}")
-
-    print("=== Writing Comparison Report ===")
-    write_paper_vs_ours(reports_dir, results_dir)
+    p1_records = run_p1(
+        experiments_dir,
+        fixed_graphs_dir,
+        device=device,
+        alphas=tuple(args.alphas),
+        seeds=tuple(args.seeds),
+        ps=tuple(args.p1_ps),
+        calibration_fraction=args.calibration_fraction,
+    )
+    _write_csv(
+        results_dir / "P1_summary.csv",
+        ["seed", "alpha", "method", "tpr", "fpr", "mean_p_attack", "mean_p_benign", "mean_p_total", "early_exit_rate_attack", "auroc", "tpr_at_fpr_1pct"],
+        p1_records,
+    )
+    meta = {
+        "calibration_fraction": args.calibration_fraction,
+        "seeds": list(args.seeds),
+        "alphas": list(args.alphas),
+        "ps": list(args.p1_ps),
+        "train2_edges": 2000,
+        "n_calib": int(2000 * args.calibration_fraction),
+    }
+    (results_dir / "P1_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    print(f"Saved {results_dir / 'P1_meta.json'}")
+    print("Run `python scripts/make_p1_report.py` to regenerate reports/P1.md.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
