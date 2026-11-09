@@ -189,7 +189,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 - **CLI shape**: `argparse` + `main(argv: list[str] | None = None) -> int`, called via `raise SystemExit(main())`.
 - **Script import path**: scripts that import `src` prepend `REPO_ROOT` to `sys.path` (see `scripts/train_all.py`, `scripts/audit_artifacts.py`, `scripts/eval_baselines_p1.py`). Prefer `python -m src.<module>` for package entry points.
 - **Numpy ↔ Torch**: data/artifacts stay in NumPy; convert to `torch` inside training/embedding and call `.cpu().numpy()` before writing results.
-- **Determinism**: thread `seed` through `random.Random`, `np.random.default_rng`, and `torch.manual_seed`; do not use global RNG without a seed.
+- **Determinism**: thread `seed` through `random.Random`, `np.random.default_rng`, and `torch.manual_seed`; do not use global RNG without a seed. `laplacian_pe` passes a seeded `v0` to ARPACK; removing it makes embeddings nondeterministic.
 - **No PyG dependency**: graph/line-graph construction is plain NumPy; attention is plain PyTorch. Do not introduce PyG for small fixes.
 - **Line-graph cap is mandatory**: a hub with degree `D` creates a `D(D-1)` clique. `K_max=32` is sampled in `src/line_graph.py`; never disable it on full graphs.
 - **CPU vs GPU batching**: `src/train_gtae.py` defaults to batched block-diagonal subgraphs on CUDA and sequential subgraphs on CPU. Preserve this branch; CPU batched mode is usually slower.
@@ -217,7 +217,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 | `src/build_dataset.py` | Protocol T/R/T_fixed sampling and graph artifacts. |
 | `src/graph_builder.py` | `GraphArrays`, split selectors, `.npz` I/O. |
 | `src/line_graph.py` | Edge→line-graph expansion, `K_max=32`, self-loops, symmetrization. |
-| `src/pe.py` | LapPE `k=8`, edge PE `phi_u + phi_v`, random sign flips. |
+| `src/pe.py` | LapPE `k=8`, seeded ARPACK start vector, edge PE `phi_u + phi_v`, random sign flips. |
 | `src/model_gtae.py` | `ARCH` table for p=2..8; encoder/decoder. |
 | `src/train_gtae.py` | Subgraph training loop, early stopping, checkpointing. |
 | `src/detectors.py` | PyOD detectors, vote rules, rank-normalized fusion, metrics. |
@@ -255,7 +255,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 ## Testing & QA
 
 - **Framework**: `pytest` (config: `pytest.ini`; `testpaths = tests`, `pythonpath = .`; quiet mode). The `pythonpath` setting is why `pytest` works from the repo root without `PYTHONPATH`.
-- **Run**: `pytest -q` (82 tests, ~6 s); single file/test as shown above.
+- **Run**: `pytest -q` (83 tests, ~6 s); single file/test as shown above.
 - **Test style**: synthetic small arrays/graphs, fixed seeds, `tmp_path`, `pytest.approx`; no network, no real pcap, no model training.
 - **Coverage by file**:
   - `test_encoder.py`: 25-byte Fig. 3 vector, IP/TCP options, direction packing, leakage.
@@ -264,7 +264,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
   - `test_crosscheck.py`: CSV matching, AM/PM tolerance, confusion accounting.
   - `test_graph_builder.py`: graph shapes, split disjointness, deterministic rebuild.
   - `test_line_graph.py`: line-graph expansion, K_max, self-loops.
-  - `test_pe.py`: LapPE shape/determinism, edge PE.
+  - `test_pe.py`: LapPE shape/determinism (seeded ARPACK), edge PE.
   - `test_model_gtae.py`: `ARCH` shapes, forward/reconstruction shape.
   - `test_detectors.py`: detector fitting, vote rules, metrics.
   - `test_leakage.py`: no IP/port features, disjoint splits, benign-only train.
@@ -277,8 +277,8 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 
 1. **Measurement CSVs are the source of truth.** `scripts/eval_baselines_p1.py` writes `results/P1_summary.csv` + `results/P1_meta.json`; `scripts/make_p1_report.py` generates `reports/P1.md`. Do not hand-edit the generated report; re-run the generator instead.
 2. **Some Markdown tables are manually maintained.** B0/B1/P1 numbers in `reports/report.md`, `README.md`, `reports/slides.md`, and `reports/paper_vs_ours.md` must be kept in sync with `results/*.csv`. If a number disagrees, trust the CSV.
-3. **Conformal caveat**: Fisher fusion assumes independent p-values; the four detectors are correlated. Measured FPR is ~18.1% (α=0.05) and ~22.9% (α=0.10) for Fisher, so Fisher is exploratory only. Bonferroni with 800 calibration flows gives FPR 3.67% @ α=0.05 and 6.13% @ α=0.10.
-4. **Calibration floor**: Bonferroni with 400 calibration flows cannot alert at α=0.05 because `4/401 ≈ 0.009975 > 0.05/7`. P1 defaults to `--calibration-fraction 0.4` (800 flows); keep that choice or document the floor. At FPR=1%, P1 Bonferroni is 0% TPR, below M1's 9.42%.
+3. **Conformal caveat**: Fisher fusion assumes independent p-values; the four detectors are correlated. Measured FPR is ~17.7% (α=0.05) and ~22.3% (α=0.10) for Fisher, so Fisher is exploratory only. Bonferroni with 800 calibration flows gives FPR 3.43% @ α=0.05 and 6.18% @ α=0.10.
+4. **Calibration floor**: Bonferroni with 400 calibration flows cannot alert at α=0.05 because `4/401 ≈ 0.009975 > 0.05/7`. P1 defaults to `--calibration-fraction 0.4` (800 flows); keep that choice or document the floor. At FPR=1%, P1 Bonferroni is 0% TPR, below M1's 9.64%.
 5. **Do not reintroduce IP/port/protocol into edge features.** The 25-byte encoding intentionally excludes them; `tests/test_leakage.py` and `test_encoder.py` pin this. Checksum bytes still depend on IP/port — known shortcut risk, not yet ablated.
 6. **Do not use attack labels during training or detector fitting.** `train1`/`train2` must remain benign-only; only `test` labels are for evaluation.
 7. **`demo/run_demo.py` needs `PYTHONPATH=.`** (or use `demo/run_demo.sh`, which sets it). It loads real checkpoints and `data/graphs/T_fixed`, so it fails on a clean clone without artifacts.

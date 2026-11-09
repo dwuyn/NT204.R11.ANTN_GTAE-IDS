@@ -240,16 +240,16 @@ section.lead p {
 ## 5. Kết quả Tái hiện Sạch & Mâu thuẫn Thực nghiệm
 
 - **Hạ tầng kiểm thử nghiêm ngặt:**
-  - 51 GB pcap CIC-IDS2017 thô, 81 pytest pass, 428 checks audit artifact.
+  - 51 GB pcap CIC-IDS2017 thô, 83 pytest pass, 428 checks audit artifact.
   - Đã huấn luyện **21 mô hình GTAE** (7 giá trị $p \times 3$ seed) trên Kaggle GPU T4.
 - **Kết quả Protocol T (Temporal sạch: Train Monday, Test Tue–Fri):**
 
 | $p$ | TPR Tái hiện (Ours) | FPR Tái hiện (Ours) | AUROC | Paper Table VI |
 |---:|---:|---:|---:|---:|
-| 2 | 8,5% | 5,8% | 0,55 | — |
-| 4 | 11,4% | 3,7% | 0,63 | — |
-| 6 | 6,9% | 2,9% | 0,83 | — |
-| **8** | <span class="badge-danger">**11,5%**</span> | **2,5%** | **0,67** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
+| 2 | 8,58% | 5,90% | 0,551 | — |
+| 4 | 11,70% | 3,62% | 0,625 | — |
+| 6 | 6,49% | 2,92% | 0,794 | — |
+| **8** | <span class="badge-danger">**11,36%**</span> | **2,47%** | **0,668** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
 
 $\implies$ **Khoảng cách khổng lồ:** Mô hình sạch không thể tách biệt tấn công chưa từng gặp ở FPR thấp!
 
@@ -327,18 +327,18 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 
 | $\alpha$ mục tiêu | Phương pháp | TPR thực đo | FPR thực đo | APD Tấn công | APD Bình thường | Tỉ lệ dừng sớm |
 |---|---|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 39,65% | 11,55% | 6,43 pkts | 7,44 pkts | 39,44% |
-| **0,05** | Fisher | **47,58%** | **18,07%** | **5,90 pkts** | 7,14 pkts | **47,39%** |
-| **0,10** | Fisher | 51,32% | 22,91% | 5,72 pkts | 6,93 pkts | 51,08% |
+| **0,01** | Fisher | 39,87% | 11,81% | 6,42 pkts | 7,44 pkts | 39,66% |
+| **0,05** | Fisher | **47,67%** | **17,73%** | **5,90 pkts** | 7,14 pkts | **47,47%** |
+| **0,10** | Fisher | 51,43% | 22,26% | 5,72 pkts | 6,92 pkts | 51,15% |
 | **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% |
-| **0,05** | Bonferroni | **16,49%** | **3,67%** | 7,57 pkts | 7,89 pkts | 15,23% |
-| **0,10** | Bonferroni | **23,07%** | **6,13%** | 7,34 pkts | 7,79 pkts | 21,75% |
+| **0,05** | Bonferroni | **16,92%** | **3,43%** | 7,57 pkts | 7,89 pkts | 15,66% |
+| **0,10** | Bonferroni | **23,47%** | **6,18%** | 7,33 pkts | 7,79 pkts | 22,24% |
 
 ### Điểm nhấn quan trọng:
-- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,67%** và TPR **16,49%**; $\alpha=0,10$ đạt FPR **6,13%** và TPR **23,07%**.
-- **Fisher không kiểm soát FPR:** TPR 47,6% nhưng FPR **18,07%** do 4 detector tương quan; chỉ dùng làm exploratory.
-- **TPR@FPR=1%:** Bonferroni 0%, Fisher 5,14%, đều thấp hơn M1 (9,42%) — P1 chưa thắng ở vùng FPR thấp.
-- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,57 gói**; $\alpha=0,10$ xuống **7,34 gói**.
+- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,43%** và TPR **16,92%**; $\alpha=0,10$ đạt FPR **6,18%** và TPR **23,47%**.
+- **Fisher không kiểm soát FPR:** TPR 47,7% nhưng FPR **17,73%** do 4 detector tương quan; chỉ dùng làm exploratory.
+- **TPR@FPR=1%:** Bonferroni 0%, Fisher 6,07%, đều thấp hơn M1 (9,64%) — P1 chưa thắng ở vùng FPR thấp.
+- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,57 gói**; $\alpha=0,10$ xuống **7,33 gói**.
 
 ---
 
@@ -350,12 +350,12 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 | **Official Repo Code** | Disconnected Linear AE | Friday 70/30 (OR vote) | **98,74%** | **13,12%** | — |
 | **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T (Sạch) | **0,50%** | **1,22%** | **0,698** |
 | **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,5%** | **2,5%** | **0,67** |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,49%** | **3,67%** | **0,652** |
+| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,36%** | **2,47%** | **0,668** |
+| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,92%** | **3,43%** | **0,656** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
 
-*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,42%).*
+*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,64%).*
 
 ---
 
@@ -384,9 +384,9 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
    - Không dừng lại ở việc báo cáo kết quả tái hiện âm tính, nhóm đã đào sâu và phát hiện **4 sai sót kỹ thuật** trong mã nguồn mở của bài báo IEEE TIFS 2025.
    - Làm sáng tỏ nghịch lý: mô hình One-class Autoencoder học đặc trưng header không thể đạt 99% TPR xuyên ngày nếu không rò rỉ phân phối.
 2. **Kỹ thuật phần mềm chuẩn mực:**
-   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 82 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
+   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 83 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
 3. **Đóng góp giải pháp mới (P1):**
-   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,67%), TPR 16,49%, APD 7,57 gói (giảm 5,4%). Fisher giảm APD còn 5,90 gói nhưng FPR 18,07% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
+   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,43%), TPR 16,92%, APD 7,57 gói (giảm 5,4%). Fisher giảm APD còn 5,90 gói nhưng FPR 17,73% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
 
 ---
 

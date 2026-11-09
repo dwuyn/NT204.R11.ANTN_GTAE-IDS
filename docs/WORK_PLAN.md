@@ -30,7 +30,7 @@
 
 **Còn lại trước khi chốt:** ablation A1–A6/B2, nhãn corrected Engelen (A3), tag H7; số P1 đã được đồng bộ lại theo `results/P1_summary.csv`.
 
-**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 82 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
+**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 83 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
 ---
 
 ## 1. Quyết định đã chốt
@@ -116,7 +116,8 @@ Protocol R dùng cùng bộ đếm test (cap 5.000/class) nhưng train1/train2 l
 
 ### 2.5 Hạ tầng kiểm thử
 
-- [x] **82 pytest** pass (thêm `test_p1.py`, `test_leakage.py`, `test_detectors.py`).
+- [x] **83 pytest** pass (thêm `test_p1.py`, `test_pe.py` deterministic, `test_leakage.py`, `test_detectors.py`).
+- [x] `laplacian_pe` dùng ARPACK `v0` có seed; embedding tái lập tuyệt đối giữa hai lần chạy.
 - [x] `scripts/audit_artifacts.py`: **428/428 checks** — gồm kiểm tra chéo packet↔flow, re-encode toàn bộ edge, disjoint split, rebuild deterministic, protocol R, fixed population.
 - [x] SHA256 toàn bộ raw OK.
 - [x] `.gitignore` chặn pcap/graph/model; `reports/` được phép commit.
@@ -158,13 +159,13 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 | p | TPR | FPR | AUROC |
 |---|---:|---:|---:|
-| 2 | 8,5% | 5,8% | 0,55 |
-| 3 | 7,7% | 3,3% | 0,57 |
-| 4 | 11,4% | 3,7% | 0,63 |
-| 5 | 8,9% | 2,5% | 0,71 |
-| 6 | 6,9% | 2,9% | 0,83 |
-| 7 | 15,1% | 3,3% | 0,83 |
-| 8 | 11,5% | 2,5% | 0,67 |
+| 2 | 8,58% | 5,90% | 0,551 |
+| 3 | 7,26% | 3,45% | 0,571 |
+| 4 | 11,70% | 3,62% | 0,625 |
+| 5 | 8,83% | 2,87% | 0,712 |
+| 6 | 6,49% | 2,92% | 0,794 |
+| 7 | 13,53% | 3,13% | 0,811 |
+| 8 | 11,36% | 2,47% | 0,668 |
 
 **Chẩn đoán:** RandomForest supervised trên **cùng edge features** (cùng ngày/phiên) đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972); nhưng **cross-day/open-class** (train Tue/Wed → test Thu/Fri) chỉ **18,1%** ở FPR 6,7% (AUROC 0,924). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; chưa tái hiện 99% của paper. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
 
@@ -172,12 +173,12 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 | Phương pháp | TPR | FPR | AUROC | TPR@FPR=1% |
 |---|---:|---:|---:|---:|
-| M1 GTAE ensemble tie | 11,54% | 2,52% | 0,668 | 9,42% |
+| M1 GTAE ensemble tie | 11,36% | 2,47% | 0,668 | 9,64% |
 | B0 raw vector ensemble tie | 0,50% | 1,22% | 0,698 | 2,13% |
 | B1 MLP-AE ensemble tie | 6,29% | 2,29% | 0,595 | 6,95% |
-| P1 Bonferroni α=0,05 | 16,49% | 3,67% | 0,652 | 0,00% |
-| P1 Bonferroni α=0,10 | 23,07% | 6,13% | 0,652 | 0,00% |
-| P1 Fisher α=0,05 | 47,58% | 18,07% | 0,641 | 5,14% |
+| P1 Bonferroni α=0,05 | 16,92% | 3,43% | 0,656 | 0,00% |
+| P1 Bonferroni α=0,10 | 23,47% | 6,18% | 0,656 | 0,00% |
+| P1 Fisher α=0,05 | 47,67% | 17,73% | 0,646 | 6,07% |
 
 P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm soát FPR và tăng TPR so với M1 ở vùng FPR ~3–4%, nhưng **chưa vượt M1 tại FPR=1%**; Fisher có TPR cao nhưng FPR không kiểm soát. Chi tiết sinh tự động: [`reports/P1.md`](../reports/P1.md).
 
@@ -334,7 +335,7 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 - [ ] README có đúng 1 lệnh train + 1 lệnh eval.
 - [x] `tests/test_leakage.py` pass.
 - [x] `reports/qa_labeling.md` sinh tự động.
-- [x] 82 pytest + 428 audit checks pass.
+- [x] 83 pytest + 428 audit checks pass.
 - [x] Bảng “paper vs ours” + giải thích chênh lệch.
 - [~] Ablation + P1 + 3 seed (P1 xong; ablation/B2 còn thiếu).
 - [x] Báo cáo/slide/demo.
