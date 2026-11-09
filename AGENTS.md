@@ -40,7 +40,7 @@ flowchart LR
 | Train | `src.train_gtae` / `scripts/train_all.py` | `experiments/.../model.pt`, `train_log.csv` |
 | Embed | `src/embed.py` | `.npz` embeddings (`z`, `flow_id`, `day`, `y`, `attack_type`, `p`) or in-memory `z` |
 | Detect + evaluate | `python -m src.eval` | per-run JSON + summary CSV |
-| Baselines/P1 | `scripts/eval_baselines_p1.py` | `results/B0_summary.csv`, `B1_summary.csv`, `P1_summary.csv` |
+| Baselines/P1 | `scripts/eval_baselines_p1.py` | `results/B0_summary.csv`, `B1_summary.csv`, `P1_summary.csv`, `P1_meta.json` |
 | Audit | `scripts/audit_artifacts.py` | 428 cross-checks over raw/processed/graph artifacts |
 
 ### Data model and invariants
@@ -67,7 +67,8 @@ flowchart LR
 - `model.pt` checkpoint dict: `p`, `arch`, `pe_dim`, `use_pe`, `state_dict`. Loaded by `src.embed.load_model`.
 - `results/M1_p{p}_seed{s}.json`: full per-detector, per-class, confusion details.
 - `results/M1_summary.csv`: 21 models × 6 detector/ensemble rows.
-- `results/P1_summary.csv`: P1 rows per seed/alpha/fusion method; **no AUROC column**.
+- `results/P1_summary.csv`: P1 rows per seed/alpha/fusion method, including `auroc` and `tpr_at_fpr_1pct`.
+- `results/P1_meta.json`: calibration fraction, seeds, alphas, packet budgets, `n_calib`.
 
 ## Key Directories
 
@@ -160,6 +161,10 @@ python -m src.eval --models experiments/T --graphs data/graphs/T \
 # B0/B1/P1 (requires checkpoints + T_fixed). NOTE: see Known Pitfalls first.
 PYTHONPATH=. python scripts/eval_baselines_p1.py
 
+# P1-only rerun with a larger conformal calibration split, then report:
+PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only --calibration-fraction 0.4
+python scripts/make_p1_report.py      # regenerates reports/P1.md from CSV
+
 # 5-minute demo; wrapper sets PYTHONPATH and cwd
 ./demo/run_demo.sh
 ```
@@ -182,7 +187,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 - **Python 3.11**, `from __future__ import annotations`, type hints on public functions.
 - **Style**: 4-space indent, double quotes, PEP 8-ish; no enforced formatter/linter config is present.
 - **CLI shape**: `argparse` + `main(argv: list[str] | None = None) -> int`, called via `raise SystemExit(main())`.
-- **Script import path**: scripts that import `src` prepend `REPO_ROOT` to `sys.path` (see `scripts/train_all.py`, `scripts/audit_artifacts.py`). `scripts/eval_baselines_p1.py` does **not**; run it with `PYTHONPATH=.`.
+- **Script import path**: scripts that import `src` prepend `REPO_ROOT` to `sys.path` (see `scripts/train_all.py`, `scripts/audit_artifacts.py`, `scripts/eval_baselines_p1.py`). Prefer `python -m src.<module>` for package entry points.
 - **Numpy ↔ Torch**: data/artifacts stay in NumPy; convert to `torch` inside training/embedding and call `.cpu().numpy()` before writing results.
 - **Determinism**: thread `seed` through `random.Random`, `np.random.default_rng`, and `torch.manual_seed`; do not use global RNG without a seed.
 - **No PyG dependency**: graph/line-graph construction is plain NumPy; attention is plain PyTorch. Do not introduce PyG for small fixes.
@@ -220,7 +225,8 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 | `src/calibrate.py` | Conformal p-values; Fisher/Bonferroni fusion. |
 | `src/early_exit.py` | Sequential alpha-spending/early-exit evaluation. |
 | `scripts/train_all.py` | Resumable 7 p × 3 seed runner. |
-| `scripts/eval_baselines_p1.py` | B0/B1/P1; **writes a hardcoded `paper_vs_ours.md`** — fix before rerunning. |
+| `scripts/eval_baselines_p1.py` | B0/B1/P1 evaluation; writes measurement CSVs and `P1_meta.json`. |
+| `scripts/make_p1_report.py` | Generates `reports/P1.md` from `results/P1_summary.csv`; do not hand-edit tables. |
 | `scripts/audit_artifacts.py` | End-to-end artifact audit (428 checks). |
 | `scripts/train_fullgraph.py` | One-off full-graph ablation (no 200-edge subgraph sampling). |
 | `scripts/repro_cic_flows.py` | Rebuild authors' CICFlowMeter-style segmentation for comparison. |
@@ -232,7 +238,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 | `tests/test_p1.py` | Conformal p-values, fusion, early-exit behavior. |
 | `results/M1_summary.csv` | Canonical M1 measurement table. |
 | `results/B0_summary.csv` / `B1_summary.csv` | Canonical baseline measurements. |
-| `results/P1_summary.csv` | Canonical P1 measurements (no AUROC column). |
+| `results/P1_summary.csv` | Canonical P1 measurements (includes AUROC + TPR@FPR=1%). |
 | `docs/REPRO_AUDIT.md` | Paper-vs-code forensic audit; source for the negative result. |
 | `docs/WORK_PLAN.md` | Living plan/status; top-level status may overclaim. |
 
@@ -240,7 +246,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 
 - **Runtime**: Python **3.11.15** in a `uv`-managed `.venv/` (`uv 0.12.4`; see `.venv/pyvenv.cfg`); Linux x86_64; Bash.
 - **Installed locally**: `torch 2.14.1+cpu`, `pyod 3.6.7`, `scikit-learn 1.9.1`, `scipy 1.17.1`, `numpy 2.4.6`, `pyarrow 26.0.0`, `dpkt 1.9.8`, `PyYAML 6.0.3`, `pytest 9.1.1`, `matplotlib 3.11.2`, `networkx 3.6.1`. `pandas` is **not** installed; use `pyarrow.parquet`.
-- **No dependency manifest**: no `requirements.txt`, `pyproject.toml`, or lockfile. If adding dependencies, create/pin `requirements.txt`; do not silently add imports that are absent from the environment.
+- **Dependency manifest**: `requirements.txt` pins the direct runtime/tooling packages; there is still no `pyproject.toml` or lockfile. `pandas` is intentionally absent.
 - **Training**: local CPU works for smoke tests; full 21-model training used Kaggle T4 (`kaggle/`, `kaggle_long/`). Kernels enable GPU/internet and are pushed with `kaggle kernels push -p kaggle` or `kaggle kernels push -p kaggle_long`; graph data is split across multiple Kaggle datasets and stitched by `kaggle_long/train_full.py`, then `scripts/train_all.py --resume` continues after session expiry. `src.train_gtae --device auto` selects CUDA when available.
 - **Evaluation/demo**: CPU by default; `scripts/eval_baselines_p1.py` explicitly uses `torch.device("cpu")`.
 - **No lint/typecheck config**: no Ruff/Black/Mypy config. Follow existing style; avoid repo-wide reformatting.
@@ -249,7 +255,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 ## Testing & QA
 
 - **Framework**: `pytest` (config: `pytest.ini`; `testpaths = tests`, `pythonpath = .`; quiet mode). The `pythonpath` setting is why `pytest` works from the repo root without `PYTHONPATH`.
-- **Run**: `pytest -q` (81 tests, ~6 s); single file/test as shown above.
+- **Run**: `pytest -q` (82 tests, ~6 s); single file/test as shown above.
 - **Test style**: synthetic small arrays/graphs, fixed seeds, `tmp_path`, `pytest.approx`; no network, no real pcap, no model training.
 - **Coverage by file**:
   - `test_encoder.py`: 25-byte Fig. 3 vector, IP/TCP options, direction packing, leakage.
@@ -269,11 +275,12 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 
 ## Known Pitfalls
 
-1. **`scripts/eval_baselines_p1.py` can overwrite a correct report with stale numbers.** `write_paper_vs_ours()` hardcodes the P1 table and `write_text()`s `reports/paper_vs_ours.md`. The actual measurements are in `results/P1_summary.csv`; regenerate tables from CSV before rerunning or fix the writer first.
-2. **README eval command is broken as written**: `python scripts/eval_baselines_p1.py` raises `ModuleNotFoundError: No module named 'src'`. Use `PYTHONPATH=. python scripts/eval_baselines_p1.py` or add a `sys.path` insert.
-3. **Report numbers are not all backed by CSVs.** P1 numbers in `reports/report.md`, `README.md`, `reports/slides.md` disagree with `results/P1_summary.csv`; B0/B1 report rows disagree with `results/B0_summary.csv` / `B1_summary.csv`. M1 p=8 ensemble numbers do match. Treat CSV as truth.
-4. **Conformal caveat**: Fisher fusion assumes independent p-values; the four detectors are correlated. Measured FPR at α=0.05 is ~17% for Fisher, while Bonferroni at α=0.10 controls FPR (~5.15%). Bonferroni at α=0.05 cannot alert with only 400 calibration flows (minimum fused p ≈ 0.009975 > α/7).
+1. **Measurement CSVs are the source of truth.** `scripts/eval_baselines_p1.py` writes `results/P1_summary.csv` + `results/P1_meta.json`; `scripts/make_p1_report.py` generates `reports/P1.md`. Do not hand-edit the generated report; re-run the generator instead.
+2. **Some Markdown tables are manually maintained.** B0/B1/P1 numbers in `reports/report.md`, `README.md`, `reports/slides.md`, and `reports/paper_vs_ours.md` must be kept in sync with `results/*.csv`. If a number disagrees, trust the CSV.
+3. **Conformal caveat**: Fisher fusion assumes independent p-values; the four detectors are correlated. Measured FPR is ~18.1% (α=0.05) and ~22.9% (α=0.10) for Fisher, so Fisher is exploratory only. Bonferroni with 800 calibration flows gives FPR 3.67% @ α=0.05 and 6.13% @ α=0.10.
+4. **Calibration floor**: Bonferroni with 400 calibration flows cannot alert at α=0.05 because `4/401 ≈ 0.009975 > 0.05/7`. P1 defaults to `--calibration-fraction 0.4` (800 flows); keep that choice or document the floor. At FPR=1%, P1 Bonferroni is 0% TPR, below M1's 9.42%.
 5. **Do not reintroduce IP/port/protocol into edge features.** The 25-byte encoding intentionally excludes them; `tests/test_leakage.py` and `test_encoder.py` pin this. Checksum bytes still depend on IP/port — known shortcut risk, not yet ablated.
 6. **Do not use attack labels during training or detector fitting.** `train1`/`train2` must remain benign-only; only `test` labels are for evaluation.
 7. **`demo/run_demo.py` needs `PYTHONPATH=.`** (or use `demo/run_demo.sh`, which sets it). It loads real checkpoints and `data/graphs/T_fixed`, so it fails on a clean clone without artifacts.
 8. **Large files are intentionally untracked.** Do not `git add data/`, `experiments/`, `*.pt`, `*.npy`, or `artifacts/`.
+9. **P1 CSV schema now includes `auroc` and `tpr_at_fpr_1pct`.** The ranking score is `1 - min_p` across packet budgets; `P1_meta.json` records calibration fraction and `n_calib`.
