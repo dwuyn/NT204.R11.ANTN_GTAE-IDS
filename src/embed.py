@@ -43,7 +43,7 @@ def embed_graph(
 
     pe_t = None
     if use_pe:
-        node_pe = laplacian_pe(graph.edge_index, graph.num_nodes, k=PE_DIM)
+        node_pe = laplacian_pe(graph.edge_index, graph.num_nodes, k=PE_DIM, seed=seed)
         pe = edge_pe(node_pe, graph.edge_index)
         pe_t = torch.from_numpy(pe).to(device)
 

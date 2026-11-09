@@ -35,3 +35,11 @@ def test_edge_pe_is_symmetric_sum():
     out = edge_pe(node_pe, edge_index)
     assert out.shape == (3, 4)
     np.testing.assert_allclose(out[0], node_pe[0] + node_pe[1])
+
+
+def test_laplacian_pe_is_deterministic():
+    """ARPACK must use a seeded start vector, not its random default."""
+    edge_index = np.stack([np.arange(39), np.arange(1, 40)])
+    first = laplacian_pe(edge_index, num_nodes=40, k=8, seed=7)
+    second = laplacian_pe(edge_index, num_nodes=40, k=8, seed=7)
+    np.testing.assert_allclose(first, second, atol=1e-6)

@@ -16,9 +16,13 @@ PE_DIM = 8
 
 
 def laplacian_pe(
-    edge_index: np.ndarray, num_nodes: int, k: int = PE_DIM
+    edge_index: np.ndarray, num_nodes: int, k: int = PE_DIM, seed: int = 0
 ) -> np.ndarray:
-    """Return ``[num_nodes, k]`` normalized-Laplacian eigenvectors."""
+    """Return ``[num_nodes, k]`` normalized-Laplacian eigenvectors.
+
+    ARPACK otherwise uses an unseeded random start vector; passing ``v0``
+    makes embeddings reproducible across runs.
+    """
     if num_nodes <= 1 or edge_index.shape[1] == 0 or k < 1:
         return np.zeros((num_nodes, k), dtype=np.float32)
 
@@ -35,12 +39,15 @@ def laplacian_pe(
     n_eigs = min(k + 1, num_nodes - 1)
     if n_eigs < 1:
         return np.zeros((num_nodes, k), dtype=np.float32)
+    v0 = np.random.default_rng(seed).standard_normal(num_nodes)
     try:
-        values, vectors = eigsh(laplacian, k=n_eigs, sigma=1e-6, which="LM")
+        values, vectors = eigsh(
+            laplacian, k=n_eigs, sigma=1e-6, which="LM", v0=v0
+        )
         vectors = vectors[:, np.argsort(values)]
     except Exception:
         try:
-            values, vectors = eigsh(laplacian, k=n_eigs, which="SA")
+            values, vectors = eigsh(laplacian, k=n_eigs, which="SA", v0=v0)
             vectors = vectors[:, np.argsort(values)]
         except Exception:
             # Small/ill-conditioned graphs: dense fallback.

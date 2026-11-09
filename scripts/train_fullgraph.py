@@ -46,7 +46,8 @@ def main(argv: list[str] | None = None) -> int:
         graph.edge_index, graph.num_nodes, max_neighbors=args.k_max, seed=args.seed
     )
     pe = edge_pe(
-        laplacian_pe(graph.edge_index, graph.num_nodes, k=PE_DIM), graph.edge_index
+        laplacian_pe(graph.edge_index, graph.num_nodes, k=PE_DIM, seed=args.seed),
+        graph.edge_index,
     )
     x = torch.from_numpy(graph.edge_attr).to(device)
     line_t = torch.as_tensor(line, dtype=torch.long, device=device)

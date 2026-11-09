@@ -88,7 +88,7 @@ def _make_batch(
 
     pe_t = None
     if use_pe:
-        node_pe = laplacian_pe(local_edge_index, len(nodes), k=PE_DIM)
+        node_pe = laplacian_pe(local_edge_index, len(nodes), k=PE_DIM, seed=0)
         pe = edge_pe(node_pe, local_edge_index)
         if sign_flip:
             pe = pe * rng.choice([-1.0, 1.0], size=pe.shape[1]).astype(np.float32)
