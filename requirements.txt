@@ -1,0 +1,18 @@
+# Core runtime (Python 3.11)
+# Local venv uses the CPU wheel: torch==2.14.1+cpu
+# On Kaggle/GPU, install the matching CUDA wheel instead.
+torch==2.14.1
+pyod==3.6.7
+scikit-learn==1.9.1
+scipy==1.17.1
+numpy==2.4.6
+pyarrow==26.0.0
+dpkt==1.9.8
+PyYAML==6.0.3
+
+# Tooling / optional diagnostics
+pytest==9.1.1
+matplotlib==3.11.2
+networkx==3.6.1
+
+# pandas is intentionally NOT a dependency; use pyarrow.parquet.
