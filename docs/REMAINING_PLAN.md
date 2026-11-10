@@ -11,6 +11,12 @@
 
 ---
 
+## 0. Trạng thái triển khai
+
+- `[x]` **E-A3**: `scripts/eval_recon_ablation.py` + `scripts/make_ablation_report.py`; chạy trên Kaggle T4 (kernel `tdwuyn/gtae-ids-ablation-recon`); kết quả p=8: **23,65% TPR @ 4,17% FPR**, AUROC 0,676.
+- `[x]` **A4/A6 consolidation**: `results/ablation.csv`, `reports/ablation.md`.
+- `[ ]` E-A2 no-PE, G2 latency, E-A1/B2, E-A5 hygiene, A3-labels Engelen, G1 CIC-IDS2018, H7.
+
 ## 1. Thứ tự ưu tiên
 
 | Ưu tiên | Work | Lý do | Est |
@@ -274,9 +280,9 @@ flowchart LR
 
 ## 5. Bắt đầu ngay
 
-1. Tạo `scripts/eval_recon_ablation.py` và chạy p=2,4,8 × 3 seed.
-2. Tạo `scripts/make_ablation_report.py`, gom B0/B1/M1/E-A3.
-3. Nếu kết quả hợp lý, commit `feat(ablation): add reconstruction-error detector`.
-4. Chuyển sang E-A2 no-PE; chạy trên Kaggle nếu CPU chậm.
+1. `[x]` E-A3: script + Kaggle GPU run hoàn tất; kết quả trong `results/A3_recon.csv` và `reports/ablation.md`.
+2. `[ ]` Tiếp theo: E-A2 no-PE — chạy `scripts/train_all.py --no-pe` trên Kaggle, rồi `src.eval`.
+3. `[ ]` Sau đó G2 latency; B2/A5 chỉ làm khi `results/ablation.csv` đã ổn định.
+4. `[ ]` A3-labels Engelen và G1 CIC-IDS2018 cần dữ liệu ngoài; kiểm tra dung lượng trước.
 
-**Không làm trước:** B2/A5 khi chưa có `ablation.csv`; G1 khi chưa chốt A3/A2/B2.
+**Không làm trước:** B2/A5 khi chưa có A2; G1 khi chưa chốt A3/A2/B2.

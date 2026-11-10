@@ -180,6 +180,11 @@ python scripts/repro_cic_flows.py --pcap <pcap> --csv <cicflow csv> \
   --label <CIC label> --p 8 --out <out.npz>
 python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
   --out experiments/fullgraph --epochs 100 --seed 0
+
+# A3 reconstruction-error ablation (no training) + consolidated table
+python scripts/eval_recon_ablation.py --graphs data/graphs/T \
+  --models experiments/T --ps 2 4 8 --seeds 0 1 2 --out results --device auto
+python scripts/make_ablation_report.py  # results/ablation.csv + reports/ablation.md
 ```
 
 ## Code Conventions & Common Patterns
@@ -220,7 +225,7 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 | `src/pe.py` | LapPE `k=8`, seeded ARPACK start vector, edge PE `phi_u + phi_v`, random sign flips. |
 | `src/model_gtae.py` | `ARCH` table for p=2..8; encoder/decoder. |
 | `src/train_gtae.py` | Subgraph training loop, early stopping, checkpointing. |
-| `src/detectors.py` | PyOD detectors, vote rules, rank-normalized fusion, metrics. |
+| `src/detectors.py` | PyOD detectors (lazy imports), vote rules, rank-normalized fusion, metrics. |
 | `src/eval.py` | Full model/detector evaluation CLI. |
 | `src/calibrate.py` | Conformal p-values; Fisher/Bonferroni fusion. |
 | `src/early_exit.py` | Sequential alpha-spending/early-exit evaluation. |
@@ -228,6 +233,8 @@ python scripts/train_fullgraph.py --p 8 --graphs data/graphs/T \
 | `scripts/eval_baselines_p1.py` | B0/B1/P1 evaluation; writes measurement CSVs and `P1_meta.json`. |
 | `scripts/make_p1_report.py` | Generates `reports/P1.md` from `results/P1_summary.csv`; do not hand-edit tables. |
 | `scripts/audit_artifacts.py` | End-to-end artifact audit (428 checks). |
+| `scripts/eval_recon_ablation.py` | A3 reconstruction-error detector; reuses frozen checkpoints, no training. |
+| `scripts/make_ablation_report.py` | Consolidates M1/B0/B1/A3 into `results/ablation.csv` + `reports/ablation.md`. |
 | `scripts/train_fullgraph.py` | One-off full-graph ablation (no 200-edge subgraph sampling). |
 | `scripts/repro_cic_flows.py` | Rebuild authors' CICFlowMeter-style segmentation for comparison. |
 | `configs/data.yaml` | Frozen flow/split/sampling decisions. |

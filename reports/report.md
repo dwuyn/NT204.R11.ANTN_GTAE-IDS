@@ -164,6 +164,18 @@ Do cùng một môi trường mạng và cùng phiên lưu lượng, mô hình c
 
 *Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector/FPR trước khi kết luận graph transformer tốt hơn. Dòng “M1 (Chạy theo luật Code)” chưa có artifact lưu nên không dùng làm kết luận. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,64%).*
 
+### 5.2. Ablation A3 — Reconstruction-error detector
+
+A3 thay 4 detector bằng ngưỡng 99th percentile của reconstruction MSE trên `train2`; không train lại.
+
+| p | M1 TPR/FPR | A3 TPR/FPR | A3 AUROC | ΔTPR (A3−M1) |
+|---:|---:|---:|---:|---:|
+| 2 | 8,58% / 5,90% | 4,58% / 3,71% | 0,436 | −4,00 pp |
+| 4 | 11,70% / 3,62% | 7,40% / 1,73% | 0,543 | −4,30 pp |
+| 8 | 11,36% / 2,47% | **23,65% / 4,17%** | 0,676 | **+12,29 pp** |
+
+A3 chỉ có lợi thế rõ ở p=8, nhưng tại FPR 4,17% (cao hơn M1 2,47%); p=2/4 lại kém M1. Vì vậy không thể kết luận A3 “tốt hơn” nếu không so cùng operating point. Chi tiết sinh tự động: [`reports/ablation.md`](../reports/ablation.md).
+
 ---
 
 ## CHƯƠNG 6: ĐỀ XUẤT CẢI TIẾN P1: CALIBRATED CONFORMAL FUSION & EARLY EXIT

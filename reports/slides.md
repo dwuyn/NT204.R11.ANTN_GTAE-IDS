@@ -352,6 +352,7 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 | **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **6,29%** | **2,29%** | **0,595** |
 | **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,36%** | **2,47%** | **0,668** |
 | **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,92%** | **3,43%** | **0,656** |
+| **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | **23,65%** | **4,17%** | **0,676** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
 

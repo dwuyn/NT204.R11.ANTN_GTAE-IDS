@@ -17,6 +17,7 @@
 | **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **11,36%** | **2,47%** | **0,668** | Tái hiện sạch đúng mô tả paper |
 | **M1 (Official Rules)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | — | — | Không dùng làm kết luận |
 | **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **16,92%** | **3,43%** | **0,656** | TPR@FPR=1% = 0%; Fisher 47,67/17,73 không kiểm soát FPR |
+| **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | Threshold 99th pct | **23,65%** | **4,17%** | **0,676** | p=2/4 kém M1; p=8 khác FPR |
 | **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed → Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** | Giới hạn trên phân loại giám sát |
 | **Upper Bound (Same-session RF)** | Random Forest | Same-session (Random) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** | Rò rỉ nhận diện phiên/ngày |
 

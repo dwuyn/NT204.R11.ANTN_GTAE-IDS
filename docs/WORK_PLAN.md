@@ -137,6 +137,8 @@ Protocol R dùng cùng bộ đếm test (cap 5.000/class) nhưng train1/train2 l
 | `reports/qa_labeling.md` | QA tổng hợp, sinh tự động |
 | `reports/graph_stats.md` | Thống kê graph T/R/T_fixed |
 | `reports/P1.md` | Báo cáo P1 sinh tự động từ CSV |
+| `reports/ablation.md` | Bảng ablation sinh tự động từ `results/ablation.csv` |
+| `results/A3_recon.csv` | Reconstruction-error ablation p=2,4,8 × 3 seed (Kaggle T4) |
 | `src/` | 15 module pipeline |
 | `tests/` | 11 file test |
 | `scripts/audit_artifacts.py` | Audit tái chạy được |
@@ -180,6 +182,8 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | P1 Bonferroni α=0,05 | 16,92% | 3,43% | 0,656 | 0,00% |
 | P1 Bonferroni α=0,10 | 23,47% | 6,18% | 0,656 | 0,00% |
 | P1 Fisher α=0,05 | 47,67% | 17,73% | 0,646 | 6,07% |
+
+**A3 reconstruction-error (p=8, mean 3 seed):** TPR **23,65%** @ FPR **4,17%**, AUROC **0,676**; p=2/4 yếu hơn M1. Chi tiết: [`reports/ablation.md`](../reports/ablation.md).
 
 P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm soát FPR và tăng TPR so với M1 ở vùng FPR ~3–4%, nhưng **chưa vượt M1 tại FPR=1%**; Fisher có TPR cao nhưng FPR không kiểm soát. Chi tiết sinh tự động: [`reports/P1.md`](../reports/P1.md).
 
@@ -253,7 +257,7 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 | E1 | B0: vector 50p + detectors | `results/B0.csv` | Không đồ thị; p=2,4,8 | D2 | 1 |
 | E2 | B1: MLP-AE | `results/B1.csv` | AE không đồ thị; 3 seed | D2 | 1 |
 | E3 | B2: E-GraphSAGE-AE | `results/B2.csv` | Đồ thị không transformer | D2 | 1,5 |
-| E4 | A1–A6 | `results/ablation.csv` | Tối thiểu A1, A2, A3, A4, A6; A5 nếu kịp | E1–E3 | 2 |
+| E4 | A1–A6 | `results/ablation.csv` | E-A3 xong (Kaggle T4); A2/B2/A5 còn | E1–E3 | 2 |
 | E5 | Bảng “paper vs ours” | `reports/paper_vs_ours.md` | Có cột Δ + giải thích | E4 | 1 |
 
 ### Phase F — Proposal P1 (4–5 ngày)
