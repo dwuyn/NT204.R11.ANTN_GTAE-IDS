@@ -4,6 +4,7 @@
 **Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & cải tiến GTAE-IDS
 **Paper neo:** J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, "GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection," *IEEE TIFS*, vol. 20, pp. 4026–4041, 2025, doi: 10.1109/TIFS.2025.3557741.
 **Tài liệu kỹ thuật chi tiết:** [`GTAE-IDS_Research_docs.md`](GTAE-IDS_Research_docs.md) — file này **thay thế trạng thái WBS §7** và là nguồn duy nhất theo dõi tiến độ.
+**Kế hoạch mở rộng còn lại:** [`REMAINING_PLAN.md`](REMAINING_PLAN.md) — thứ tự ưu tiên, acceptance và lệnh bắt đầu cho ablation/B2/A3/G1/G2/H7.
 
 > Quy ước: `[x]` = đã xong và đã verify; `[ ]` = chưa xong; `[~]` = xong một phần.
 > Ước lượng công sức là **person-day**, dùng để xếp lịch, không phải cam kết.
