@@ -1,0 +1,82 @@
+{
+  "p": 2,
+  "seed": 1,
+  "model": "A3_recon_mse",
+  "rule": "threshold_99pct",
+  "threshold": 0.08275142870843409,
+  "train2_edges": 2000,
+  "test_edges": 42362,
+  "n": 42362,
+  "positives": 37362,
+  "negatives": 5000,
+  "tp": 2003,
+  "fp": 223,
+  "tn": 4777,
+  "fn": 35359,
+  "tpr": 0.05361062041646593,
+  "fpr": 0.0446,
+  "precision": 0.8998203054806828,
+  "f1": 0.10119228048903708,
+  "auroc": 0.4364318023660404,
+  "pr_auc": 0.8741077531686595,
+  "tpr_at_fpr": 0.05361062041646593,
+  "fpr_at_threshold": 0.0446,
+  "per_class_tpr": {
+    "Bot": {
+      "n": 736,
+      "tpr": 0.03940217391304348
+    },
+    "DDoS": {
+      "n": 5000,
+      "tpr": 0.0014
+    },
+    "DoS GoldenEye": {
+      "n": 5000,
+      "tpr": 0.0238
+    },
+    "DoS Hulk": {
+      "n": 5000,
+      "tpr": 0.0344
+    },
+    "DoS Slowhttptest": {
+      "n": 4216,
+      "tpr": 0.17813092979127135
+    },
+    "DoS slowloris": {
+      "n": 3869,
+      "tpr": 0.17782372706125613
+    },
+    "FTP-Patator": {
+      "n": 3972,
+      "tpr": 0.04355488418932528
+    },
+    "Heartbleed": {
+      "n": 1,
+      "tpr": 0.0
+    },
+    "Infiltration": {
+      "n": 8,
+      "tpr": 0.0
+    },
+    "PortScan": {
+      "n": 5000,
+      "tpr": 0.0014
+    },
+    "SSH-Patator": {
+      "n": 2511,
+      "tpr": 0.0011947431302270011
+    },
+    "Web Attack - Brute Force": {
+      "n": 1358,
+      "tpr": 0.015463917525773196
+    },
+    "Web Attack - Sql Injection": {
+      "n": 12,
+      "tpr": 0.0
+    },
+    "Web Attack - XSS": {
+      "n": 679,
+      "tpr": 0.048600883652430045
+    }
+  }
+}
