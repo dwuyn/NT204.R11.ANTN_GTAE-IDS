@@ -10,10 +10,6 @@ from __future__ import annotations
 from typing import Iterable, Mapping
 
 import numpy as np
-from pyod.models.hbos import HBOS
-from pyod.models.iforest import IForest
-from pyod.models.inne import INNE
-from pyod.models.ocsvm import OCSVM
 from scipy.stats import rankdata
 from sklearn.metrics import average_precision_score, f1_score, precision_score, roc_auc_score
 
@@ -23,6 +19,13 @@ DETECTOR_NAMES = ("IForest", "OCSVM", "HBOS", "INNE")
 def build_detectors(
     contamination: float = 0.01, seed: int = 0
 ) -> dict[str, object]:
+    # Lazy imports keep `metrics` usable on machines without PyOD (e.g. a
+    # metrics-only Kaggle kernel) and avoid paying the import cost elsewhere.
+    from pyod.models.hbos import HBOS
+    from pyod.models.iforest import IForest
+    from pyod.models.inne import INNE
+    from pyod.models.ocsvm import OCSVM
+
     return {
         "IForest": IForest(
             n_estimators=150, contamination=contamination, n_jobs=1, random_state=seed
