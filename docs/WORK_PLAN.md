@@ -257,7 +257,7 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 | E1 | B0: vector 50p + detectors | `results/B0.csv` | Không đồ thị; p=2,4,8 | D2 | 1 |
 | E2 | B1: MLP-AE | `results/B1.csv` | AE không đồ thị; 3 seed | D2 | 1 |
 | E3 | B2: E-GraphSAGE-AE | `results/B2.csv` | Đồ thị không transformer | D2 | 1,5 |
-| E4 | A1–A6 | `results/ablation.csv` | E-A3 xong (Kaggle T4); A2/B2/A5 còn | E1–E3 | 2 |
+| E4 | A1–A6 | `results/ablation.csv` | E-A3 + E-A2 xong (Kaggle T4); B2/A5 còn | E1–E3 | 2 |
 | E5 | Bảng “paper vs ours” | `reports/paper_vs_ours.md` | Có cột Δ + giải thích | E4 | 1 |
 
 ### Phase F — Proposal P1 (4–5 ngày)

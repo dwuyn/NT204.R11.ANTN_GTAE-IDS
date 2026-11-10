@@ -353,6 +353,7 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 | **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,36%** | **2,47%** | **0,668** |
 | **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,92%** | **3,43%** | **0,656** |
 | **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | **23,65%** | **4,17%** | **0,676** |
+| **A2: No LapPE** | GTAE without PE | Temporal T (Sạch) | **6,21%** | **2,24%** | **0,690** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
 

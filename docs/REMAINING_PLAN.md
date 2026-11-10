@@ -15,7 +15,8 @@
 
 - `[x]` **E-A3**: `scripts/eval_recon_ablation.py` + `scripts/make_ablation_report.py`; chạy trên Kaggle T4 (kernel `tdwuyn/gtae-ids-ablation-recon`); kết quả p=8: **23,65% TPR @ 4,17% FPR**, AUROC 0,676.
 - `[x]` **A4/A6 consolidation**: `results/ablation.csv`, `reports/ablation.md`.
-- `[ ]` E-A2 no-PE, G2 latency, E-A1/B2, E-A5 hygiene, A3-labels Engelen, G1 CIC-IDS2018, H7.
+- `[x]` **E-A2**: train p=8 × 3 seed với `--no-pe` trên Kaggle T4; eval local. Kết quả: **6,21% ± 7,97% TPR @ 2,24% FPR**, AUROC 0,690, TPR@1% 9,31%. LapPE không phải yếu tố quyết định; seed variance cao.
+- `[ ]` G2 latency, E-A1/B2, E-A5 hygiene, A3-labels Engelen, G1 CIC-IDS2018, H7.
 
 ## 1. Thứ tự ưu tiên
 

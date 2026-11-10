@@ -176,6 +176,8 @@ A3 thay 4 detector bằng ngưỡng 99th percentile của reconstruction MSE tr�
 
 A3 chỉ có lợi thế rõ ở p=8, nhưng tại FPR 4,17% (cao hơn M1 2,47%); p=2/4 lại kém M1. Vì vậy không thể kết luận A3 “tốt hơn” nếu không so cùng operating point. Chi tiết sinh tự động: [`reports/ablation.md`](../reports/ablation.md).
 
+**A2 — bỏ LapPE (p=8):** TPR **6,21% ± 7,97%** @ FPR **2,24%**, AUROC **0,690**, TPR@1% **9,31%**. Seed variance rất lớn (0,2–15,3% TPR), nên LapPE không phải yếu tố quyết định; A2 thấp hơn M1 về TPR trung bình nhưng AUROC tương đương.
+
 ---
 
 ## CHƯƠNG 6: ĐỀ XUẤT CẢI TIẾN P1: CALIBRATED CONFORMAL FUSION & EARLY EXIT
