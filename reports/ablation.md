@@ -1,6 +1,6 @@
 # Ablation và baseline (sinh tự động)
 
-**Nguồn:** `results/M1_summary.csv`, `results/B0_summary.csv`, `results/B1_summary.csv`, `results/A3_recon.csv`.
+**Nguồn:** `results/M1_summary.csv`, `results/B0_summary.csv`, `results/B1_summary.csv`, `results/A3_recon.csv`, `results/noPE/M1_summary.csv` (A2 no-PE).
 
 **Quy ước:** TPR/FPR là mean theo seed. `A3_recon` dùng ngưỡng 99th percentile của reconstruction error trên `train2`; cột `FPR@threshold` là FPR thực trên test tại ngưỡng đó, không phải FPR=1%.
 
@@ -24,6 +24,7 @@
 | A3_recon | 23.65% | 4.17% | 0.676 | 23.65% | 4.17% |
 | B0 | 0.50% | 1.22% | 0.698 | 2.13% | 1.58% |
 | B1 | 6.29% | 2.29% | 0.595 | 6.95% | 2.52% |
+| A2_noPE | 6.21% | 2.24% | 0.690 | 9.31% | 2.53% |
 
 ## 3. Đọc kết quả
 

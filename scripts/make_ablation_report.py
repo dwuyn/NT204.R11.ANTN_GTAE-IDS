@@ -84,6 +84,20 @@ def group_by_p(rows: list[dict[str, str]]) -> dict[int, list[dict[str, str]]]:
     return groups
 
 
+def select_ensemble(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not rows:
+        return rows
+    if "model" in rows[0] and "detector" in rows[0]:
+        return [
+            row
+            for row in rows
+            if row.get("model") == "ensemble" and row.get("detector") == "tie"
+        ]
+    if "rule" in rows[0]:
+        return [row for row in rows if row.get("rule") == "ensemble_tie"]
+    return rows
+
+
 def main() -> int:
     m1_rows = normalize_rows(
         [
@@ -145,13 +159,18 @@ def main() -> int:
 
     # Optional future ablation outputs.
     for name, filename, model in (
-        ("A2_noPE", "A2_no_pe.csv", "GTAE_no_pe"),
+        ("A2_noPE", "noPE/M1_summary.csv", "GTAE_no_pe"),
         ("B2", "B2_summary.csv", "E-GraphSAGE-AE"),
         ("A5_hygiene", "A5_hygiene.csv", "GTAE_hygiene"),
     ):
-        rows = normalize_rows(read_csv(RESULTS / filename))
+        rows = select_ensemble(normalize_rows(read_csv(RESULTS / filename)))
         if not rows:
             continue
+        if name == "A2_noPE":
+            with open(RESULTS / "A2_no_pe.csv", "w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=list(rows[0]), lineterminator="\n")
+                writer.writeheader()
+                writer.writerows(rows)
         for p, group in group_by_p(rows).items():
             records.append(
                 {
@@ -181,7 +200,8 @@ def main() -> int:
         "# Ablation và baseline (sinh tự động)",
         "",
         "**Nguồn:** `results/M1_summary.csv`, `results/B0_summary.csv`, "
-        "`results/B1_summary.csv`, `results/A3_recon.csv`.",
+        "`results/B1_summary.csv`, `results/A3_recon.csv`, "
+        "`results/noPE/M1_summary.csv` (A2 no-PE).",
         "",
         "**Quy ước:** TPR/FPR là mean theo seed. `A3_recon` dùng ngưỡng "
         "99th percentile của reconstruction error trên `train2`; cột "

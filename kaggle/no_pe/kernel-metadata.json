@@ -1,0 +1,14 @@
+{
+  "id": "tdwuyn/gtae-ids-no-pe-training",
+  "title": "GTAE-IDS no-PE training",
+  "code_file": "run_no_pe.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": false,
+  "dataset_sources": ["tdwuyn/gtae-ids-ablation"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
