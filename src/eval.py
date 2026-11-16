@@ -49,7 +49,8 @@ def evaluate_model(
     fit_idx = permutation[n_calib:]
 
     detectors = build_detectors(contamination=contamination, seed=seed)
-    fit_detectors(detectors, z_train[fit_idx])
+    fit_notes: dict[str, dict] = {}
+    fit_detectors(detectors, z_train[fit_idx], notes=fit_notes)
 
     predictions, scores = predict_detectors(detectors, z_test)
     calib_predictions, calib_scores = predict_detectors(detectors, z_train[calibration_idx])
@@ -77,6 +78,7 @@ def evaluate_model(
         "calibration_edges": int(n_calib),
         "device": str(device),
         "use_pe": use_pe,
+        "detector_fit_notes": fit_notes,
         "detectors": {},
         "ensembles": {},
     }

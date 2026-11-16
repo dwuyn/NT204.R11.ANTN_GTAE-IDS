@@ -1,0 +1,57 @@
+[
+  {
+    "day": "monday",
+    "flows": 133793,
+    "mapped": 133770,
+    "match_rate": 0.9998,
+    "offset_s": 7199.0,
+    "agreement": 1.0,
+    "ours_attack_engelen_benign": 0,
+    "ours_benign_engelen_attack": 0,
+    "uncertain_ours": 1539
+  },
+  {
+    "day": "tuesday",
+    "flows": 110550,
+    "mapped": 110514,
+    "match_rate": 0.9997,
+    "offset_s": 7200.0,
+    "agreement": 0.9956,
+    "ours_attack_engelen_benign": 0,
+    "ours_benign_engelen_attack": 481,
+    "uncertain_ours": 1412
+  },
+  {
+    "day": "wednesday",
+    "flows": 280306,
+    "mapped": 280265,
+    "match_rate": 0.9999,
+    "offset_s": 7199.0,
+    "agreement": 0.9954,
+    "ours_attack_engelen_benign": 1,
+    "ours_benign_engelen_attack": 1283,
+    "uncertain_ours": 1951
+  },
+  {
+    "day": "thursday",
+    "flows": 170872,
+    "mapped": 167785,
+    "match_rate": 0.9819,
+    "offset_s": 7200.0,
+    "agreement": 0.9998,
+    "ours_attack_engelen_benign": 5,
+    "ours_benign_engelen_attack": 26,
+    "uncertain_ours": 2499
+  },
+  {
+    "day": "friday",
+    "flows": 349256,
+    "mapped": 348280,
+    "match_rate": 0.9972,
+    "offset_s": 7200.0,
+    "agreement": 0.995,
+    "ours_attack_engelen_benign": 39,
+    "ours_benign_engelen_attack": 1698,
+    "uncertain_ours": 6111
+  }
+]

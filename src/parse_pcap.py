@@ -25,7 +25,7 @@ import socket
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator
 
 import dpkt
 import pyarrow as pa
@@ -68,6 +68,7 @@ class FlowState:
     t_last: float
     n_pkts: int
     start_with_syn: bool
+    packets: list[tuple[float, bytes, int]] = field(default_factory=list)
     fin_from: set[int] = field(default_factory=set)
     saw_rst: bool = False
 
@@ -117,42 +118,49 @@ def _open_reader(fh):
     return dpkt.pcap.Reader(fh)
 
 
-def parse_pcap(
+def iter_flows(
     pcap_path: str | Path,
-    out_dir: str | Path,
-    day: str,
     idle_timeout: float = 120.0,
     max_packets: int | None = None,
-) -> dict[str, Any]:
-    """Parse ``pcap_path`` and write ``packets_{day}.parquet``/``flows_{day}.parquet``."""
-    pcap_path = Path(pcap_path)
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    counters: Counter | None = None,
+    on_packet: Callable[[int, int, float, bytes, int], None] | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Yield one dict per closed flow, in closing order (= flow-id order).
 
-    packets = _ParquetBuffer(out_dir / f"packets_{day}.parquet", PACKET_SCHEMA)
-    flows = _ParquetBuffer(out_dir / f"flows_{day}.parquet", FLOW_SCHEMA)
+    Each dict has keys ``flow_id, src_ip, src_port, dst_ip, dst_port, t_first,
+    t_last, n_pkts_total, start_with_syn, end_reason, packets`` where ``packets``
+    is a list of ``(ts, kept25, dir)`` in arrival order, at most ``MAX_PACKETS``
+    long. ``counters`` is updated with the same keys/``+1`` sites as
+    ``parse_pcap`` so callers can reproduce its summary exactly.
+
+    Flows are only yielded once closed, so per-flow packet lists arrive grouped;
+    a caller that needs the original global packet order (``parse_pcap`` writes
+    its parquet rows in arrival order) passes ``on_packet(flow_id, pkt_idx, ts,
+    kept25, dir)``, which is called for each kept packet as it is read.
+    """
+    if counters is None:
+        counters = Counter()
     active: dict[tuple, FlowState] = {}
-    counters: Counter[str] = Counter()
     next_flow_id = 0
+    pcap_path = Path(pcap_path)
 
-    def finalize(state: FlowState, reason: str) -> None:
+    def row(state: FlowState, reason: str) -> dict[str, Any]:
         src_ip, src_port = state.first_endpoint
         dst_ip, dst_port = state.peer_endpoint
-        flows.add(
-            {
-                "flow_id": state.flow_id,
-                "src_ip": src_ip,
-                "src_port": src_port,
-                "dst_ip": dst_ip,
-                "dst_port": dst_port,
-                "t_first": state.t_first,
-                "t_last": state.t_last,
-                "n_pkts_total": state.n_pkts,
-                "start_with_syn": state.start_with_syn,
-                "end_reason": reason,
-            }
-        )
         counters["flows_written"] += 1
+        return {
+            "flow_id": state.flow_id,
+            "src_ip": src_ip,
+            "src_port": src_port,
+            "dst_ip": dst_ip,
+            "dst_port": dst_port,
+            "t_first": state.t_first,
+            "t_last": state.t_last,
+            "n_pkts_total": state.n_pkts,
+            "start_with_syn": state.start_with_syn,
+            "end_reason": reason,
+            "packets": state.packets,
+        }
 
     with open(pcap_path, "rb") as fh:
         reader = _open_reader(fh)
@@ -194,16 +202,16 @@ def parse_pcap(
             key = _flow_key(src_ip, sport, dst_ip, dport)
             state = active.get(key)
             if state is not None and ts - state.t_last > idle_timeout:
-                finalize(state, "idle_timeout")
-                counters["flows_idle_timeout"] += 1
                 del active[key]
+                counters["flows_idle_timeout"] += 1
+                yield row(state, "idle_timeout")
                 state = None
 
             # A fresh SYN after teardown means the 5-tuple was reused.
             if state is not None and _is_flow_start(tcp) and (state.fin_from or state.saw_rst):
-                finalize(state, "reopened")
-                counters["flows_reopened"] += 1
                 del active[key]
+                counters["flows_reopened"] += 1
+                yield row(state, "reopened")
                 state = None
 
             if state is None:
@@ -224,15 +232,9 @@ def parse_pcap(
             state.n_pkts += 1
             state.t_last = max(state.t_last, float(ts))
             if state.n_pkts <= MAX_PACKETS:
-                packets.add(
-                    {
-                        "flow_id": state.flow_id,
-                        "pkt_idx": state.n_pkts,
-                        "ts": float(ts),
-                        "dir": direction,
-                        "kept25": kept,
-                    }
-                )
+                state.packets.append((float(ts), kept, direction))
+                if on_packet is not None:
+                    on_packet(state.flow_id, state.n_pkts, float(ts), kept, direction)
 
             if tcp.flags & dpkt.tcp.TH_FIN:
                 state.fin_from.add(direction)
@@ -242,8 +244,48 @@ def parse_pcap(
 
     counters["flows_at_eof"] = len(active)
     for state in active.values():
-        finalize(state, "eof")
+        yield row(state, "eof")
     active.clear()
+
+
+def parse_pcap(
+    pcap_path: str | Path,
+    out_dir: str | Path,
+    day: str,
+    idle_timeout: float = 120.0,
+    max_packets: int | None = None,
+) -> dict[str, Any]:
+    """Parse ``pcap_path`` and write ``packets_{day}.parquet``/``flows_{day}.parquet``."""
+    pcap_path = Path(pcap_path)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    packets = _ParquetBuffer(out_dir / f"packets_{day}.parquet", PACKET_SCHEMA)
+    flows = _ParquetBuffer(out_dir / f"flows_{day}.parquet", FLOW_SCHEMA)
+    counters: Counter[str] = Counter()
+
+    def emit_packet(
+        flow_id: int, pkt_idx: int, ts: float, kept: bytes, direction: int
+    ) -> None:
+        packets.add(
+            {
+                "flow_id": flow_id,
+                "pkt_idx": pkt_idx,
+                "ts": ts,
+                "dir": direction,
+                "kept25": kept,
+            }
+        )
+
+    for flow in iter_flows(
+        pcap_path,
+        idle_timeout=idle_timeout,
+        max_packets=max_packets,
+        counters=counters,
+        on_packet=emit_packet,
+    ):
+        flow.pop("packets")
+        flows.add(flow)
 
     packets.close()
     flows.close()

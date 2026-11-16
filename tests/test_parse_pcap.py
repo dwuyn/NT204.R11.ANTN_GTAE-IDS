@@ -10,7 +10,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from src.packet_encoder import KEPT_BYTES
-from src.parse_pcap import parse_pcap
+from src.parse_pcap import MAX_PACKETS, iter_flows, parse_pcap
 
 CLIENT = ("192.168.10.5", 50000)
 SERVER = ("192.168.10.50", 80)
@@ -196,3 +196,61 @@ def test_truncated_header_is_counted(tmp_path):
         "malformed_tcp", 0
     )
     assert dropped == 1
+
+
+def test_iter_flows_matches_parse_pcap(tmp_path):
+    pcap = tmp_path / "iter.pcap"
+    other = ("192.168.10.99", 443)
+    _write_pcap(
+        pcap,
+        [
+            (0.0, _pkt(CLIENT, SERVER, dpkt.tcp.TH_SYN)),
+            (0.1, _pkt(SERVER, CLIENT, dpkt.tcp.TH_SYN | dpkt.tcp.TH_ACK, seq=100)),
+            (0.2, _pkt(CLIENT, SERVER, dpkt.tcp.TH_ACK, seq=2)),
+            (0.3, _pkt(other, SERVER, dpkt.tcp.TH_SYN)),
+            (0.4, _pkt(CLIENT, SERVER, dpkt.tcp.TH_FIN | dpkt.tcp.TH_ACK, seq=2)),
+            (0.5, _pkt(CLIENT, SERVER, dpkt.tcp.TH_SYN, seq=9)),  # 5-tuple reuse
+            (200.0, _pkt(other, SERVER, dpkt.tcp.TH_ACK)),  # idle split
+        ]
+        + [
+            (200.0 + 0.01 * i, _pkt(("10.1.1.1", 1000 + i), SERVER, dpkt.tcp.TH_SYN))
+            for i in range(10)
+        ],
+    )
+
+    parsed = parse_pcap(pcap, tmp_path / "out", "t")
+    flows = _read(tmp_path / "out" / "flows_t.parquet")
+    packets = _read(tmp_path / "out" / "packets_t.parquet")
+    streamed = list(iter_flows(pcap))
+
+    assert len(streamed) == len(flows) == parsed["flows_written"]
+    assert [flow["flow_id"] for flow in streamed] == list(range(len(streamed)))
+    for row, flow in zip(flows, streamed):
+        for key in (
+            "flow_id",
+            "t_first",
+            "t_last",
+            "n_pkts_total",
+            "end_reason",
+            "src_ip",
+            "src_port",
+            "dst_ip",
+            "dst_port",
+            "start_with_syn",
+        ):
+            assert flow[key] == row[key], key
+        assert len(flow["packets"]) <= MAX_PACKETS
+
+    # The concatenated per-flow packet lists reproduce the parquet rows exactly.
+    flat = [
+        (flow["flow_id"], idx, ts, direction, kept)
+        for flow in streamed
+        for idx, (ts, kept, direction) in enumerate(flow["packets"], start=1)
+    ]
+    written = {
+        (p["flow_id"], p["pkt_idx"], p["ts"], p["dir"], p["kept25"]) for p in packets
+    }
+    assert len(flat) == len(written) == len(packets)
+    assert set(flat) == written
+    assert any(flow["end_reason"] == "idle_timeout" for flow in streamed)
+    assert any(flow["end_reason"] == "reopened" for flow in streamed)

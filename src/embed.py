@@ -11,6 +11,7 @@ import torch
 
 from src.graph_builder import GraphArrays, load_graph
 from src.line_graph import build_line_graph
+from src.model_egsage import EGraphSAGE
 from src.model_gtae import GTAE
 from src.pe import PE_DIM, edge_pe, laplacian_pe
 
@@ -19,7 +20,11 @@ def load_model(
     checkpoint_path: str | Path, device: torch.device
 ) -> tuple[GTAE, dict]:
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model = GTAE(checkpoint["p"], pe_dim=checkpoint.get("pe_dim", PE_DIM))
+    arch_name = checkpoint.get("arch_name", "transformer")
+    if arch_name not in ("transformer", "egsage"):
+        raise ValueError(f"unknown arch_name in {checkpoint_path}: {arch_name}")
+    builder = GTAE if arch_name == "transformer" else EGraphSAGE
+    model = builder(checkpoint["p"], pe_dim=checkpoint.get("pe_dim", PE_DIM))
     model.load_state_dict(checkpoint["state_dict"])
     model.to(device).eval()
     return model, checkpoint

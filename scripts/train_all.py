@@ -32,6 +32,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--k-max", type=int, default=32)
     parser.add_argument("--no-pe", action="store_true")
+    parser.add_argument(
+        "--arch", default="transformer", choices=["transformer", "egsage"]
+    )
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     parser.add_argument(
         "--batched", action=argparse.BooleanOptionalAction, default=None
@@ -64,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
                 use_pe=not args.no_pe,
                 device=args.device,
                 batched=args.batched,
+                arch=args.arch,
             )
             record = {
                 "p": p,

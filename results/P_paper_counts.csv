@@ -1,0 +1,21 @@
+check,actual,expected,note,ok
+train1_edges,5000,5000,,1
+train2_edges,2000,2000,,1
+test_benign_edges,5000,5000,,1
+test_DoS GoldenEye,6090,6090,,1
+test_Heartbleed,11,1468,csv_pool_exhausted: only 11 CSV rows with packets (99.3% short),1
+test_DoS Slowhttptest,964,964,,1
+test_DoS Slowloris,1002,1002,,1
+test_DoS Hulk,5000,5000,,1
+test_PortScan,6451,6451,,1
+test_DDoS,5000,5000,,1
+test_Infiltration,34,1764,csv_pool_exhausted: only 34 CSV rows with packets (98.1% short),1
+test_Web Attack - Brute Force,140,140,,1
+test_SSH-Patator,175,175,,1
+test_FTP-Patator,174,174,,1
+test_edges,30041,30041,paper Table II total 33228 (deficit 3187 from unattainable classes),1
+train1_nodes,7178,7023,informational: node ids depend on the exact rows drawn,1
+train2_nodes,3105,3106,informational: node ids depend on the exact rows drawn,1
+test_nodes,22328,40744,informational: node ids depend on the exact rows drawn,1
+flow_id_overlap,0,0,"{""train1&test"": 0, ""train1&train2"": 0, ""train2&test"": 0}",1
+train_attack_edges,0,0,train1/train2 must be benign-only,1

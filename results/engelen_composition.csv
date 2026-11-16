@@ -1,0 +1,16 @@
+label,engelen_effective,engelen_attempted,paper_table_vii,ppaper_built
+BENIGN,1657693,0,5000,5000
+PortScan,159151,0,6451,6451
+DoS Hulk,158469,593,5000,5000
+DDoS,95123,0,5000,5000
+DoS GoldenEye,7567,80,6090,6090
+DoS Slowloris,4001,1731,1002,1002
+FTP-Patator,3973,11,174,174
+SSH-Patator,2980,8,175,175
+DoS Slowhttptest,1742,3369,964,964
+Bot,738,1470,0,0
+Web Attack - Brute Force,151,1214,140,140
+Infiltration,32,16,1764,34
+Web Attack - XSS,27,652,0,0
+Web Attack - Sql Injection,12,0,0,0
+Heartbleed,11,0,1468,11

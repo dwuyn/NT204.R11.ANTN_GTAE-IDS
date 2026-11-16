@@ -7,7 +7,7 @@ uses the two voting rules from the paper's ambiguity: >=3/4 (strict) and >=2/4
 
 from __future__ import annotations
 
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, MutableMapping
 
 import numpy as np
 from scipy.stats import rankdata
@@ -36,9 +36,111 @@ def build_detectors(
     }
 
 
-def fit_detectors(detectors: Mapping[str, object], benign: np.ndarray) -> None:
-    for model in detectors.values():
+class MaskedDetector:
+    """Runs a detector on a fixed subset of columns.
+
+    ``pyod``'s HBOS bins every column into equal-width histograms; a column whose
+    float32 values collapse to fewer than three distinct numbers cannot be binned
+    at all (numpy raises) and carries no information either. Fitting such a
+    detector on the informative columns and scoring on the same columns keeps the
+    detector's definition intact instead of emitting NaNs or a truncated ladder.
+    """
+
+    def __init__(self, inner: object, columns: np.ndarray):
+        self.inner = inner
+        self.columns = columns
+
+    def fit(self, X: np.ndarray) -> "MaskedDetector":
+        self.inner.fit(X[:, self.columns])
+        return self
+
+    def decision_function(self, X: np.ndarray) -> np.ndarray:
+        return self.inner.decision_function(X[:, self.columns])
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return self.inner.predict(X[:, self.columns])
+
+    @property
+    def n_bins(self) -> int:
+        return self.inner.n_bins
+
+    @n_bins.setter
+    def n_bins(self, value: int) -> None:
+        self.inner.n_bins = value
+
+    def __getattr__(self, item: str) -> object:  # threshold_, labels_, ...
+        return getattr(self.inner, item)
+
+
+def _informative_columns(X: np.ndarray) -> np.ndarray:
+    """Boolean mask of columns with at least three distinct float32 values."""
+    return np.array([np.unique(X[:, i]).size >= 3 for i in range(X.shape[1])], dtype=bool)
+
+
+def _fit_one(
+    name: str, model: object, benign: np.ndarray, notes: dict[str, dict] | None
+) -> object:
+    """Fit one detector, degrading only as far as the data forces.
+
+    A healthy 20-bin fit is tried first and kept untouched, so detectors that bin
+    nothing (IForest/OCSVM/INNE) never change and healthy HBOS fits are identical
+    to before. When HBOS cannot bin (numpy refuses columns whose float32 values
+    are too few or too tightly packed), the fit degrades in a recorded, bounded
+    way: cap ``n_bins`` at the sparsest kept column's distinct-value count and walk
+    down to pyod's floor of 3; if that still fails, drop the column with the
+    fewest distinct values (it carries almost no information) and retry.
+    """
+    try:
         model.fit(benign)
+        return model
+    except ValueError as exc:
+        if "Too many bins" not in str(exc) or getattr(model, "n_bins", None) is None:
+            raise
+
+    distinct = np.array([np.unique(benign[:, i]).size for i in range(benign.shape[1])])
+    keep = distinct >= 3
+    if not keep.any():
+        raise ValueError(f"{name}: every column is degenerate; cannot fit")
+    dropped = int((~keep).sum())
+
+    while keep.any():
+        columns = np.flatnonzero(keep)
+        start = min(int(getattr(model, "n_bins", 20)), int(distinct[columns].min()))
+        for bins in range(start, 2, -1):
+            candidate = MaskedDetector(model, keep) if not keep.all() else model
+            candidate.n_bins = bins
+            try:
+                candidate.fit(benign)
+            except ValueError as exc:
+                if "Too many bins" not in str(exc):
+                    raise
+                continue
+            if notes is not None and (dropped or bins != 20):
+                notes[name] = {
+                    "n_bins": bins,
+                    "dropped_columns": dropped,
+                    "reason": "embedding columns too sparse/degenerate to bin",
+                }
+            return candidate
+        keep[columns[np.argmin(distinct[columns])]] = False
+        dropped += 1
+    raise ValueError(f"{name}: cannot fit even after masking and reducing bins")
+
+
+def fit_detectors(
+    detectors: MutableMapping[str, object],
+    benign: np.ndarray,
+    notes: dict[str, dict] | None = None,
+) -> None:
+    """Fit every detector on benign embeddings only.
+
+    ``notes`` records any degradation forced by degenerate embedding columns (see
+    `MaskedDetector` and the HBOS bin ladder below), so the affected measurement
+    stays auditable. Healthy fits are untouched: the mask is all-True and 20 bins
+    are kept.
+    """
+    for name in list(detectors):
+        detectors[name] = _fit_one(name, detectors[name], benign, notes)
 
 
 def predict_detectors(

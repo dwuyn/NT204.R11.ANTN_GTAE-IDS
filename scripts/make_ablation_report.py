@@ -12,14 +12,15 @@ Supported inputs:
   - results/A3_recon.csv            (reconstruction-error ablation)
 
 Optional future inputs (ignored if absent):
-  - results/A2_no_pe.csv
-  - results/B2_summary.csv
+  - results/noPE/M1_summary.csv    (A2 no-PE; also written to results/A2_no_pe.csv)
+  - results/B2/M1_summary.csv      (B2 E-GraphSAGE-AE)
   - results/A5_hygiene.csv
 """
 
 from __future__ import annotations
 
 import csv
+import json
 import statistics as stats
 import sys
 from pathlib import Path
@@ -30,6 +31,27 @@ OUT_CSV = RESULTS / "ablation.csv"
 OUT_MD = REPO_ROOT / "reports" / "ablation.md"
 
 METRICS = ("tpr", "fpr", "auroc", "tpr_at_fpr", "fpr_at_threshold")
+
+
+def group_detector_rows(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
+    """Per-detector p8 rows, grouped so a multi-seed mean can be taken."""
+    grouped: dict[str, list[dict[str, str]]] = {}
+    for row in normalize_rows(rows):
+        if row.get("p") != "8" or row.get("model") != "detector":
+            continue
+        grouped.setdefault(row["detector"], []).append(row)
+    return grouped
+
+
+def read_fit_notes() -> list[tuple[str, str, dict]]:
+    """Collect `detector_fit_notes` recorded by `src.eval` for the ablation runs."""
+    notes: list[tuple[str, str, dict]] = []
+    for pattern in ("A5/A5_p8_seed*.json", "engelen_retrain/M1_p8_seed*.json"):
+        for path in sorted(RESULTS.glob(pattern)):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            for name, note in (payload.get("detector_fit_notes") or {}).items():
+                notes.append((path.stem, name, note))
+    return notes
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -160,7 +182,7 @@ def main() -> int:
     # Optional future ablation outputs.
     for name, filename, model in (
         ("A2_noPE", "noPE/M1_summary.csv", "GTAE_no_pe"),
-        ("B2", "B2_summary.csv", "E-GraphSAGE-AE"),
+        ("B2", "B2/M1_summary.csv", "E-GraphSAGE-AE"),
         ("A5_hygiene", "A5_hygiene.csv", "GTAE_hygiene"),
     ):
         rows = select_ensemble(normalize_rows(read_csv(RESULTS / filename)))
@@ -201,7 +223,8 @@ def main() -> int:
         "",
         "**Nguồn:** `results/M1_summary.csv`, `results/B0_summary.csv`, "
         "`results/B1_summary.csv`, `results/A3_recon.csv`, "
-        "`results/noPE/M1_summary.csv` (A2 no-PE).",
+        "`results/noPE/M1_summary.csv` (A2 no-PE), `results/B2/M1_summary.csv` "
+        "(B2 E-GraphSAGE-AE), `results/A5_hygiene.csv` (A5 hygiene).",
         "",
         "**Quy ước:** TPR/FPR là mean theo seed. `A3_recon` dùng ngưỡng "
         "99th percentile của reconstruction error trên `train2`; cột "
@@ -245,7 +268,49 @@ def main() -> int:
 
     lines += [
         "",
-        "## 3. Đọc kết quả",
+        "## 3. A5 header-hygiene: per-detector",
+        "",
+        "A5 zeroes TTL + IP/TCP checksums (5 of the 25 kept bytes) and retrains; the "
+        "ensemble row alone is not enough to read it, because one detector can lose "
+        "its histogram resolution and drag the vote with it.",
+        "",
+        "| detector | M1 AUROC (p8) | A5 AUROC (p8) | ΔAUROC | M1 TPR@FPR=1% | A5 TPR@FPR=1% |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    a5_detector = group_detector_rows(read_csv(RESULTS / "A5_hygiene.csv"))
+    m1_detector = group_detector_rows(read_csv(RESULTS / "M1_summary.csv"))
+    for name in ("IForest", "OCSVM", "HBOS", "INNE"):
+        a5, m1_d = a5_detector.get(name), m1_detector.get(name)
+        if not a5 or not m1_d:
+            continue
+        lines.append(
+            f"| {name} | {mean(m1_d, 'auroc'):.3f} | {mean(a5, 'auroc'):.3f} | "
+            f"{mean(a5, 'auroc') - mean(m1_d, 'auroc'):+.3f} | "
+            f"{100.0 * mean(m1_d, 'tpr_at_fpr'):.2f}% | "
+            f"{100.0 * mean(a5, 'tpr_at_fpr'):.2f}% |"
+        )
+    fit_notes = read_fit_notes()
+    if fit_notes:
+        lines += [
+            "",
+            "**Cảnh báo đo lường:** HBOS chia mỗi chiều embedding thành histogram "
+            "`n_bins` khoảng đều; embedding sau khi mask header (A5) có nhiều chiều chỉ "
+            "còn 3–6 giá trị float32 phân biệt nên `n_bins=20` không dựng được "
+            "histogram (numpy từ chối). `src.detectors.fit_detectors` vì thế tự hạ số "
+            "bin (và bỏ chiều không chia được), ghi lại trong `detector_fit_notes` của "
+            "từng run. Hàng HBOS và ensemble của các run đó KHÔNG so sánh trực tiếp "
+            "được với M1 về cấu hình detector; đọc IForest/OCSVM/INNE cho kết luận "
+            "hygiene, và đọc bảng n_bins dưới đây trước khi so ensemble.",
+            "",
+            "| run | detector | n_bins | lý do |",
+            "|---|---|---:|---|",
+        ]
+        for run, name, note in fit_notes:
+            lines.append(f"| {run} | {name} | {note['n_bins']} | {note['reason']} |")
+
+    lines += [
+        "",
+        "## 4. Đọc kết quả",
         "",
         "- A3 là detector chỉ dùng reconstruction MSE; không fit PyOD.",
         "- So sánh phải cùng p/seed và cùng operating point; `FPR@threshold` "

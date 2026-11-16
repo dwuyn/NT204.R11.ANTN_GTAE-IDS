@@ -1,0 +1,6 @@
+day,flows,mapped,match_rate,offset_s,agreement,ours_attack_engelen_benign,ours_benign_engelen_attack,uncertain_ours
+monday,133793,133770,0.9998,7199.0,1.0,0,0,1539
+tuesday,110550,110514,0.9997,7200.0,0.9956,0,481,1412
+wednesday,280306,280265,0.9999,7199.0,0.9954,1,1283,1951
+thursday,170872,167785,0.9819,7200.0,0.9998,5,26,2499
+friday,349256,348280,0.9972,7200.0,0.995,39,1698,6111

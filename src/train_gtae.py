@@ -23,6 +23,7 @@ from torch import nn
 
 from src.graph_builder import GraphArrays, load_graph
 from src.line_graph import build_line_graph
+from src.model_egsage import EGraphSAGE
 from src.model_gtae import ARCH, GTAE
 from src.pe import PE_DIM, edge_pe, laplacian_pe
 
@@ -138,7 +139,10 @@ def train(
     val_fraction: float = 0.1,
     device: str = "auto",
     batched: bool | None = None,
+    arch: str = "transformer",
 ) -> dict[str, Any]:
+    if arch not in ("transformer", "egsage"):
+        raise ValueError(f"unknown arch: {arch}")
     out_dir.mkdir(parents=True, exist_ok=True)
     if device == "auto":
         device_obj = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -174,7 +178,11 @@ def train(
         ]
 
     torch.manual_seed(seed)
-    model = GTAE(p, pe_dim=PE_DIM).to(device_obj)
+    model = (
+        GTAE(p, pe_dim=PE_DIM)
+        if arch == "transformer"
+        else EGraphSAGE(p, pe_dim=PE_DIM)
+    ).to(device_obj)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     best_val = float("inf")
     best_state: dict[str, torch.Tensor] | None = None
@@ -278,6 +286,7 @@ def train(
             "state_dict": best_state,
             "p": p,
             "arch": ARCH[p],
+            "arch_name": arch,
             "pe_dim": PE_DIM,
             "use_pe": use_pe,
         },
@@ -289,6 +298,7 @@ def train(
         writer.writerows(log_rows)
     config = {
         "p": p,
+        "arch_name": arch,
         "graphs_dir": str(graphs_dir),
         "epochs_run": len(log_rows),
         "batch_subgraphs": batch_subgraphs,
@@ -322,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--k-max", type=int, default=32)
     parser.add_argument("--no-pe", action="store_true")
+    parser.add_argument(
+        "--arch", default="transformer", choices=["transformer", "egsage"]
+    )
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     parser.add_argument(
         "--batched",
@@ -345,6 +358,7 @@ def main(argv: list[str] | None = None) -> int:
         use_pe=not args.no_pe,
         device=args.device,
         batched=args.batched,
+        arch=args.arch,
     )
     print(json.dumps(config, indent=2))
     return 0
