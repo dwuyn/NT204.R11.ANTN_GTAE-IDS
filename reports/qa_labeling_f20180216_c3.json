@@ -1,0 +1,12 @@
+{
+  "total_flows": 7257,
+  "benign": 7214,
+  "attack": 0,
+  "uncertain": 43,
+  "uncertain_rate": 0.00592531349042304,
+  "attack_types": {},
+  "label_reasons": {
+    "flow_started_before_capture": 43,
+    "no_attack_window": 7214
+  }
+}

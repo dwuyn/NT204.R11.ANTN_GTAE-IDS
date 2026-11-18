@@ -105,6 +105,13 @@ ARP Spoofing (not IP/TCP).
 sniffer, so the same flow normally appears in two files. Flow counts over the whole selection
 double-count; use one capture type per class or deduplicate by 5-tuple + timestamp.
 
+**Labelling outcome (applied 2026-11-19, `results/2018/`, `reports/cross_dataset.md`):**
+the capture holds 1,803,379 Hulk flows (18.219.193.20 -> :80) and **no** SlowHTTPTest
+HTTP traffic; the documented SlowHTTPTest window contains 105,550 two-packet,
+zero-duration attempts against a **closed port 21** (the Engelen et al. artifact for this
+date), which the labeler marks UNCERTAIN via `service_port_mismatch`. The corrected
+attacker/victim mapping is recorded in `configs/cicids2018_schedule.yaml`.
+
 **Open item:** the README gives windows but **no attacker IPs**, so `src/label.py` cannot mark
 attacks by initiator. Labeling needs a window-membership variant (all flows whose start falls in
 the window and whose 5-tuple is not a known background pair), which also means the label quality

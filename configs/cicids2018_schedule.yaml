@@ -16,46 +16,48 @@
 
 dataset: CIC-IDS2018
 pcap_day: "Friday-16-02-2018"
-victim_ips: ["172.31.69.25"]          # web server (Apache), the day's only victim
+# 18.217.21.148 is the victim's public address (row 9 of the UNB table prints it as
+# "172.31.69.25 (Valid IP:18.217.21.148)"); it is NOT an attacker address.
+victim_ips: ["172.31.69.25", "18.217.21.148"]   # web server (Apache), the day's only victim
+true_attackers: ["13.59.126.31", "18.219.193.20"]
 
-# MEASURED on the parsed victim capture (data/processed2018, 1,909,802 flows):
+# MEASURED on the parsed victim capture (data/processed/2018, 1,909,802 flows):
 #   flow bursts are 14:10-15:08 and 17:40-17:58+ (capture epoch), while the scheduled
 #   windows are 10:12-11:08 and 13:45-14:19 -> the capture clock runs 3h57m-3h58m ahead
 #   of the schedule, i.e. local = UTC - 240 min (both window boundaries line up within
 #   ~2 min: 10:12+4h = 14:12, 11:08+4h = 15:08, 13:45+4h = 17:45).
-#   The capture ends at 17:58, so it covers the first 13 of the 34 Hulk minutes.
+#   The capture ends at 17:58, so it covers the first 13 of the 34 Hulk minutes (local
+#   13:45-13:58), and the SlowHTTPTest window at local 10:12-11:08 contains only the
+#   closed-port-21 attempts described above.
 utc_offset_minutes: -240
 
 windows:
   - date: "2018-02-16"
     attack: DoS-SlowHTTPTest
     ranges: [["10:12", "11:08"]]
-    # Row prints "172.31.70.16 (Valid IP:18.219.193.20)" next to "18.217.21.148- 172.31.69.25";
-    # the internal attacker host and its public address are both listed to avoid guessing the
-    # NAT direction. If a capture shows only the public IP, drop the internal one.
-    attacker_ips: ["18.217.21.148", "18.219.193.20", "172.31.70.16"]
+    # Row: attacker "172.31.70.23 (Valid IP: 13.59.126.31)". MEASURED: the victim capture
+    # shows 105,550 flows from 13.59.126.31 to 172.31.69.25:**21** in this window, every one
+    # of them 2 packets with duration 0 (connection attempts against a closed port 21), and
+    # NO traffic to port 80. That is the same closed-port-21 artifact Engelen et al. report
+    # for 2018-02-16, so these flows cannot be accepted as SlowHTTPTest. With ports=[80]
+    # they fall out as UNCERTAIN("service_port_mismatch") instead of becoming benign.
+    # The SlowHTTPTest traffic itself is not in this capture (victim-side capture of .69.25).
+    attacker_ips: ["13.59.126.31", "172.31.70.23"]
     nat_aliases: []
-    victim_ips: ["172.31.69.25"]
+    victim_ips: ["172.31.69.25", "18.217.21.148"]
     ports: [80]
     csv_flows: 139890               # label count in the TrafficForML CSV (cross-check only)
 
   - date: "2018-02-16"
     attack: DoS-Hulk
     ranges: [["13:45", "14:19"]]
-    attacker_ips:
-      - 18.218.115.60
-      - 18.219.9.1
-      - 18.219.32.43
-      - 18.218.55.126
-      - 52.14.136.135
-      - 18.219.5.43
-      - 18.216.200.189
-      - 18.218.229.235
-      - 18.218.11.51
-      - 18.216.24.42
-      - 18.217.21.148
+    # Row: attacker "172.31.70.16 (Valid IP:18.219.193.20)". The 18.218.x/18.219.x list
+    # belongs to the 20-02 DDoS rows, not to this attack, so it is not repeated here.
+    # MEASURED: 1,803,379 flows from 18.219.193.20 to 172.31.69.25:80 inside this window
+    # (10 packets each, median duration 0.14 s) -- the flood this capture does contain.
+    attacker_ips: ["18.219.193.20", "172.31.70.16"]
     nat_aliases: []
-    victim_ips: ["172.31.69.25"]
+    victim_ips: ["172.31.69.25", "18.217.21.148"]
     ports: [80]
     csv_flows: 461912               # label count in the TrafficForML CSV (cross-check only)
 

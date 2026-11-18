@@ -1,0 +1,16 @@
+{
+  "total_flows": 1909802,
+  "benign": 847,
+  "attack": 1803379,
+  "uncertain": 105576,
+  "uncertain_rate": 0.055281123383471166,
+  "attack_types": {
+    "DoS-Hulk": 1803379
+  },
+  "label_reasons": {
+    "flow_started_before_capture": 26,
+    "no_attack_window": 847,
+    "service_port_mismatch": 105550,
+    "window:DoS-Hulk": 1803379
+  }
+}

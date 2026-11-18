@@ -183,3 +183,44 @@ not to representation learning.
 **Consequence.** The P1 report carries the structural-floor explanation next to
 the `Aborted` α = 0.01 rows, and no method change (no Holm, no max-p combination)
 is introduced to work around it.
+
+---
+
+## 7. Cross-dataset (CIC-IDS2018) one-day protocol
+
+**Decision.** The MAY cross-dataset experiment uses **one day** (Friday 2018-02-16) in
+the same `25`-byte / p-packet pipeline, with a temporal split and a measured FPR:
+`cutoff` = `t_first` of the earliest labeled attack flow; `train1`/`train2` = benign
+strictly before it; `test` = benign at/after it plus the attack flows. Written by
+`scripts/build_cross_dataset_graphs.py` to `data/graphs/2018/` (same `.npz` contract,
+so `train_all.py` and `src/eval.py` run unchanged).
+
+**Evidence.** The day's victim-side capture contains 1,803,379 Hulk flows
+(18.219.193.20 -> 172.31.69.25:80) but **no** SlowHTTPTest HTTP traffic: the documented
+SlowHTTPTest window holds 105,550 two-packet, zero-duration attempts against a closed
+port 21, the artifact Engelen et al. report for this date. They are labelled UNCERTAIN,
+not attack. The capture ends at 17:58 UTC, i.e. after 13 of the 34 Hulk minutes.
+Measured p=8 result: ensemble AUROC 0.764, TPR 5.99% @ FPR 1.52% (INNE 0.812 /
+16.69% @ 6.15%) versus 2017 `T` 0.594 / 4.18% @ 2.79%.
+
+**Consequence.** 2018 contributes an FPR measurement on unseen benign traffic and a
+one-class flood result; it is **not** comparable to the paper's Table VIII (98.74%,
+malicious-only test) and must never be quoted as a reproduction attempt of it. Only one
+attack class is represented, so no 2018 per-class table is produced.
+
+---
+
+## 8. Wait behind "early detection" (wait_p)
+
+**Decision.** Report the decision delay in seconds, not only in packets:
+`wait_p = t_p - t_1` for flows reaching p packets, and `delay_p = t_last - t_1` for the
+rest (short flows are zero-padded and cannot be scored before they close).
+
+**Evidence.** Measured on 2017 `T` (`results/wait_p.csv`, 592,554 benign / 438,711 attack
+flows): attack delay median 0.079 s at p=8 but p95 3.79 s; per class at p=8 —
+Hulk 0.147 s, DDoS 0.60 s, GoldenEye 6.27 s, slowloris 3.00 s (p95 46.5 s),
+Slowhttptest 63.1 s (p95 218 s). Only 0.1% of PortScan flows ever reach 8 packets.
+
+**Consequence.** Any claim of "near real-time" must be stated as "median 0.37 s to
+collect 8 packets, p95 3.8 s, 3-63 s for slow-rate attacks", and the paper's 1.28 us/packet
+is quoted only as model-only compute.
