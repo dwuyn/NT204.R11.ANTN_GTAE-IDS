@@ -1,0 +1,160 @@
+{
+  "p": 3,
+  "seed": 2,
+  "model": "experiments/2018/p3/seed2/model.pt",
+  "graph_nodes": 9846,
+  "test_edges": 10000,
+  "train2_edges": 2000,
+  "calibration_edges": 400,
+  "device": "cpu",
+  "use_pe": true,
+  "detector_fit_notes": {},
+  "detectors": {
+    "IForest": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 110,
+      "fp": 63,
+      "tn": 4937,
+      "fn": 4890,
+      "tpr": 0.022,
+      "fpr": 0.0126,
+      "precision": 0.6358381502890174,
+      "f1": 0.042528513435144015,
+      "auroc": 0.5350351600000001,
+      "pr_auc": 0.5157188802777978,
+      "tpr_at_fpr": 0.036,
+      "fpr_at_threshold": 0.0158,
+      "threshold": -0.04341238112856834,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.022
+        }
+      }
+    },
+    "OCSVM": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 152,
+      "fp": 64,
+      "tn": 4936,
+      "fn": 4848,
+      "tpr": 0.0304,
+      "fpr": 0.0128,
+      "precision": 0.7037037037037037,
+      "f1": 0.05828220858895705,
+      "auroc": 0.57676484,
+      "pr_auc": 0.5477451734925102,
+      "tpr_at_fpr": 0.036,
+      "fpr_at_threshold": 0.0158,
+      "threshold": 283.45547361716996,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.0304
+        }
+      }
+    },
+    "HBOS": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 5,
+      "fp": 63,
+      "tn": 4937,
+      "fn": 4995,
+      "tpr": 0.001,
+      "fpr": 0.0126,
+      "precision": 0.07352941176470588,
+      "f1": 0.001973164956590371,
+      "auroc": 0.47775106,
+      "pr_auc": 0.4766281676241252,
+      "tpr_at_fpr": 0.0366,
+      "fpr_at_threshold": 0.0172,
+      "threshold": 14.318773569412452,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.001
+        }
+      }
+    },
+    "INNE": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 0,
+      "fp": 0,
+      "tn": 5000,
+      "fn": 5000,
+      "tpr": 0.0,
+      "fpr": 0.0,
+      "precision": 0.0,
+      "f1": 0.0,
+      "auroc": 0.51095736,
+      "pr_auc": 0.5227284262926094,
+      "tpr_at_fpr": 0.0328,
+      "fpr_at_threshold": 0.0156,
+      "threshold": 0.981023876368417,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.0
+        }
+      }
+    }
+  },
+  "ensembles": {
+    "strict": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 5,
+      "fp": 57,
+      "tn": 4943,
+      "fn": 4995,
+      "tpr": 0.001,
+      "fpr": 0.0114,
+      "precision": 0.08064516129032258,
+      "f1": 0.0019755037534571317,
+      "auroc": 0.52623318,
+      "pr_auc": 0.516639801660459,
+      "tpr_at_fpr": 0.036,
+      "fpr_at_threshold": 0.0158,
+      "threshold": 0.9749021634615384,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.001
+        }
+      }
+    },
+    "tie": {
+      "n": 10000,
+      "positives": 5000,
+      "negatives": 5000,
+      "tp": 110,
+      "fp": 65,
+      "tn": 4935,
+      "fn": 4890,
+      "tpr": 0.022,
+      "fpr": 0.013,
+      "precision": 0.6285714285714286,
+      "f1": 0.04251207729468599,
+      "auroc": 0.52623318,
+      "pr_auc": 0.516639801660459,
+      "tpr_at_fpr": 0.036,
+      "fpr_at_threshold": 0.0158,
+      "threshold": 0.9749021634615384,
+      "per_class_tpr": {
+        "DoS-Hulk": {
+          "n": 5000,
+          "tpr": 0.022
+        }
+      }
+    }
+  }
+}

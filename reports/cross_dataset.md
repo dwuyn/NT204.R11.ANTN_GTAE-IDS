@@ -52,6 +52,21 @@ Graph: 10.000 edge test, 9.818 nút — hub tấn công (1 attacker → 1 victim
 - **INNE là detector mạnh nhất ở cả hai bộ** (AUROC 0,812 / 0,578) — nhưng ở 2018 nó trả giá bằng FPR 6,15%, gấp 4 lần IForest. Ensemble `tie` lại **thấp hơn** INNE một mình (0,764): bỏ phiếu 2/4 kéo tín hiệu của INNE xuống, đúng vấn đề đã thấy ở Table VI và là động cơ của P1.
 - **Không đạt con số nào của paper.** Table VIII của [1] ghi 2018 p=8: **98,74%** TPR (6.012 cạnh, test **chỉ có traffic độc hại**). Con số 5,99% ở đây không phủ định nó — hai bài toán khác nhau: của nhóm có FPR thật (5.000 benign) và ngưỡng do contamination 1% quyết định, của paper không có benign trong test.
 
+### 3.1 Đường cong p = 2…8 (3 seed mỗi p)
+
+| p | ensemble `tie` TPR | FPR | AUROC | TPR@1% | INNE AUROC | paper Table VIII |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 4,35% | 1,57% | 0,278 | 3,56% | 0,320 | 81,63% |
+| 3 | 3,04% | 1,36% | 0,542 | 3,41% | 0,530 | 91,27% |
+| 4 | 1,32% | 1,15% | 0,612 | 3,65% | 0,638 | 93,67% |
+| 5 | 9,13% | 1,53% | 0,576 | 8,56% | 0,594 | 97,05% |
+| 6 | 3,36% | 1,62% | 0,523 | 6,34% | 0,658 | 98,51% |
+| 7 | 2,32% | 1,02% | 0,607 | 2,03% | 0,701 | 98,65% |
+| 8 | 5,99% | 1,52% | **0,764** | 5,94% | **0,812** | 98,74% |
+
+- **Không tái hiện được xu hướng tăng đơn điệu** của paper (81,6 → 98,7). AUROC dao động 0,28–0,76 và chỉ ở p=8 mới vượt 0,7. Ở p=2 AUROC **0,278** — xếp hạng *ngược*: với 2 gói đầu, flow flood (SYN + SYN-ACK) có lỗi tái tạo thấp hơn benign 2 gói (RDP/SMB đóng sớm) nên detector chấm attack là "bình thường".
+- Kết luận trung thực cho 2018: chỉ p=8 đo được tín hiệu (AUROC 0,76; INNE 0,81), và ngay cả khi đó TPR@FPR=1% chỉ 5,9–19,5% — không có "vài gói đầu là đủ" trong môi trường mới với FPR thật.
+
 ## 4. Giới hạn — đọc kèm
 
 1. **Attack và benign đến từ hai nhóm host khác nhau** (flood 1 attacker → 1 server; benign = RDP/SMB/telemetry của 5 PC). Một phần AUROC 0,76 là cấu trúc điểm cuối, không phải nội dung gói. Muốn tách bạch phải có benign cùng host/port — dữ liệu một ngày này không có.
@@ -92,7 +107,7 @@ Theo lớp tấn công ở p = 8 (median delay / p95):
 ## 6. Tái chạy
 
 ```bash
-# 2018: label -> graph -> train -> eval (mỗi bước ~<2 phút trên CPU)
+# 2018: label -> graph -> train (p2..7: 6m30s; p8: 1m38s) -> eval (1m15s), all CPU
 python -m src.label --flows data/processed/2018/flows_f20180216.parquet \
   --schedule configs/cicids2018_schedule.yaml --offset-minutes -240 \
   --out data/processed/2018/flows_f20180216_labeled.parquet --qa reports/qa_labeling_f20180216.json
@@ -101,7 +116,7 @@ for n in 1 2 3 4 5; do python -m src.label --flows data/processed/2018/flows_f20
   --out data/processed/2018/flows_f20180216_c${n}_labeled.parquet; done
 python scripts/build_cross_dataset_graphs.py --ps 2 3 4 5 6 7 8
 python scripts/train_all.py --graphs data/graphs/2018 --out experiments/2018 --ps 8 --seeds 0 1 2 --device cpu
-python -m src.eval --models experiments/2018 --graphs data/graphs/2018 --out results/2018 --ps 8 --seeds 0 1 2 --device cpu
+python -m src.eval --models experiments/2018 --graphs data/graphs/2018 --out results/2018 --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --device cpu
 
 # wait_p (3 giây)
 python scripts/eval_wait_p.py --out results/wait_p.csv
