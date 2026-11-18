@@ -57,7 +57,7 @@ Graph: 10.000 edge test, 9.818 nút — hub tấn công (1 attacker → 1 victim
 1. **Attack và benign đến từ hai nhóm host khác nhau** (flood 1 attacker → 1 server; benign = RDP/SMB/telemetry của 5 PC). Một phần AUROC 0,76 là cấu trúc điểm cuối, không phải nội dung gói. Muốn tách bạch phải có benign cùng host/port — dữ liệu một ngày này không có.
 2. **5.000 flow Hulk là mẫu của 1,8M flow gần trùng**; FPR đo trên 5.000 benign từ 5 capture. Không có khoảng tin cậy theo lớp (chỉ 3 seed).
 3. **Không có SlowHTTPTest** (mục 1) ⇒ không thể báo per-class như Table VII; 2018 chỉ đóng góp một lớp.
-4. Capture bị cắt ở 17:58 ⇒ 18/34 phút của Hulk.
+4. Capture bị cắt ở 17:58 ⇒ 13/34 phút của Hulk.
 
 ## 5. Wait behind "early detection" (`results/wait_p.csv`)
 
