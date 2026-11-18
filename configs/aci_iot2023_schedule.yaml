@@ -1,0 +1,62 @@
+# ACI-IoT-2023 — TCP-only subset used for the MAY cross-dataset experiment.
+# Source of the schedule: data/raw/aci/ACI-IoT-2023-README.txt (verbatim windows, 2026-11-19).
+# Source of the data: Kaggle mirror emilynack/aci-iot-network-traffic-dataset-2023
+#   (CC BY 4.0), 3068 files / 82.70 GiB; only the subsets below are fetched.
+# Original dataset: Army Cyber Institute, ACI IoT Network Traffic Dataset 2023.
+#
+# Why this dataset rather than 2018 for the primary cross-dataset number: it ships
+# attack windows AND two full benign days on the same IoT lab, with no label defect
+# (unlike the CIC-IDS2018 CSVs, see configs/cicids2018_schedule.yaml).
+#
+# Schema mirrors configs/cicids2017_schedule.yaml. Times are the README's local wall clock;
+# the pcap timestamps are UTC epoch, so `utc_offset_minutes` must be calibrated (same
+# procedure as 2017: align the flow-rate peak with the documented window).
+
+dataset: ACI-IoT-2023
+# Measured, not assumed: file 2023-10-31-09_02_06_wireless.pcap starts at epoch 1698757326
+# = 2023-10-31 09:02:06 UTC, i.e. the filename clock and the capture clock agree, and the
+# README's windows (09:00-16:05 for a day whose first file is 09:02) use that same clock.
+utc_offset_minutes: 0
+benign_days: ["2023-10-31", "2023-11-03"]
+
+windows:
+  - date: "2023-10-30"
+    attack: PortScan
+    ranges: [["12:20", "15:56"]]
+    attacker_ips: []              # README does not list attacker addresses
+    nat_aliases: []
+    victim_ips: []                # lab-wide scan; victim set empty means "any /24 host"
+    ports: []
+  - date: "2023-11-01"
+    attack: DoS-Slowloris
+    ranges: [["09:58", "10:26"]]
+    attacker_ips: []
+    nat_aliases: []
+    victim_ips: []
+    ports: [80, 443]
+  - date: "2023-11-02"
+    attack: DictionaryBruteForce
+    ranges: [["09:30", "11:44"]]
+    attacker_ips: []
+    nat_aliases: []
+    victim_ips: []
+    ports: [22, 80, 443, 3389]
+
+# Deliberately excluded. Reason: our parser keeps TCP flows whose first packet is
+# SYN-without-ACK and requires at least p >= 2 packets; these classes violate one or both.
+excluded:
+  - {name: "ICMP Flooding", window: "2023-11-01 09:30-09:55", reason: "ICMP is out of paper scope (TCP only)"}
+  - {name: "UDP Flood", window: "2023-11-01 10:54-11:21", reason: "UDP"}
+  - {name: "DNS Flood", window: "2023-11-01 11:23-11:49", reason: "UDP"}
+  - {name: "SYN Flood", window: "2023-11-01 10:28-10:53", reason: "1-packet flows (no handshake) < p"}
+  - {name: "ARP Spoofing", window: "2023-11-02 12:12-13:48", reason: "not IP/TCP; no representable flow"}
+
+# Capture layout note: every minute is captured twice, once by the wired and once by the
+# wireless sniffer, so the same flow usually appears in two files. Counting flows over the
+# whole selection double-counts; the experiment must either use one capture type per class
+# or deduplicate by 5-tuple+timestamp.
+captures:
+  root: data/raw/aci/pcap_combined/Combined_Pcaps
+  selection_rule: "filename timestamp inside a benign day or inside one of the windows above"
+  wired: "*_wired.pcap"
+  wireless: "*_wireless.pcap"

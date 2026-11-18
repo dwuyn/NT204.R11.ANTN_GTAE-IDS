@@ -1,0 +1,66 @@
+# CIC-IDS2018 one-day schedule for the MAY cross-dataset experiment (Friday 2018-02-16).
+# Source: UNB CIC dataset page, https://www.unb.ca/cic/datasets/ids-2018.html
+# Retrieved: 2026-11-19. Same schema as configs/cicids2017_schedule.yaml (src/label.py).
+#
+# Times are the collection's LOCAL wall clock. The pcap stores UTC epoch seconds and CIC
+# never states the timezone, so `utc_offset_minutes` must be calibrated the same way as for
+# 2017 (measure the SYN-rate peak of the victim capture against the scheduled window).
+#
+# Why this file exists instead of using the shipped per-flow CSV:
+#   data/raw/cicids2018/Friday-16-02-2018_TrafficForML_CICFlowMeter.csv has NO Src/Dst IP
+#   columns (80 columns, none of them an address), and its timestamps are degenerate:
+#   446,390 of 446,757 benign rows fall in a single 10-minute bucket (01:40), while the
+#   documented attack windows are 10:12-11:08 and 13:45-14:19. A flow row therefore cannot
+#   be tied to a pcap flow, and the file's own clock cannot be trusted. Labels come from the
+#   schedule below; the CSV is used only as an order-of-magnitude count cross-check.
+
+dataset: CIC-IDS2018
+pcap_day: "Friday-16-02-2018"
+victim_ips: ["172.31.69.25"]          # web server (Apache), the day's only victim
+
+# MEASURED on the parsed victim capture (data/processed2018, 1,909,802 flows):
+#   flow bursts are 14:10-15:08 and 17:40-17:58+ (capture epoch), while the scheduled
+#   windows are 10:12-11:08 and 13:45-14:19 -> the capture clock runs 3h57m-3h58m ahead
+#   of the schedule, i.e. local = UTC - 240 min (both window boundaries line up within
+#   ~2 min: 10:12+4h = 14:12, 11:08+4h = 15:08, 13:45+4h = 17:45).
+#   The capture ends at 17:58, so it covers the first 13 of the 34 Hulk minutes.
+utc_offset_minutes: -240
+
+windows:
+  - date: "2018-02-16"
+    attack: DoS-SlowHTTPTest
+    ranges: [["10:12", "11:08"]]
+    # Row prints "172.31.70.16 (Valid IP:18.219.193.20)" next to "18.217.21.148- 172.31.69.25";
+    # the internal attacker host and its public address are both listed to avoid guessing the
+    # NAT direction. If a capture shows only the public IP, drop the internal one.
+    attacker_ips: ["18.217.21.148", "18.219.193.20", "172.31.70.16"]
+    nat_aliases: []
+    victim_ips: ["172.31.69.25"]
+    ports: [80]
+    csv_flows: 139890               # label count in the TrafficForML CSV (cross-check only)
+
+  - date: "2018-02-16"
+    attack: DoS-Hulk
+    ranges: [["13:45", "14:19"]]
+    attacker_ips:
+      - 18.218.115.60
+      - 18.219.9.1
+      - 18.219.32.43
+      - 18.218.55.126
+      - 52.14.136.135
+      - 18.219.5.43
+      - 18.216.200.189
+      - 18.218.229.235
+      - 18.218.11.51
+      - 18.216.24.42
+      - 18.217.21.148
+    nat_aliases: []
+    victim_ips: ["172.31.69.25"]
+    ports: [80]
+    csv_flows: 461912               # label count in the TrafficForML CSV (cross-check only)
+
+# Locally downloaded material (data/ is git-ignored; selection documented in
+# docs/DATA_ACQUISITION.md):
+#   data/raw/cicids2018/Friday-16-02-2018/pcap/UCAP172.31.69.25-part1.pcap   victim-side capture
+#   data/raw/cicids2018/Friday-16-02-2018/pcap/capPC1-*                      five client captures
+#   data/raw/cicids2018/Friday-16-02-2018_TrafficForML_CICFlowMeter.csv      label counts only

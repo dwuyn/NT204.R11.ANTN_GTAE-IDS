@@ -14,5 +14,6 @@ PyYAML==6.0.3
 pytest==9.1.1
 matplotlib==3.11.2
 networkx==3.6.1
+remotezip==0.12.6   # range-request extraction for remote pcap archives (docs/DATA_ACQUISITION.md)
 
 # pandas is intentionally NOT a dependency; use pyarrow.parquet.
