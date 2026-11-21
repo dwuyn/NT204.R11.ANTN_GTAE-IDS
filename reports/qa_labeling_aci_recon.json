@@ -1,0 +1,16 @@
+{
+  "flows_read": 546185,
+  "flows_kept": 478003,
+  "duplicates_dropped": 68182,
+  "benign": 50025,
+  "attack": 426795,
+  "uncertain": 1183,
+  "attack_types": {
+    "PortScan": 426795
+  },
+  "label_reasons": {
+    "window:PortScan": 426795,
+    "flow_started_before_capture": 1183,
+    "outside_window": 50025
+  }
+}

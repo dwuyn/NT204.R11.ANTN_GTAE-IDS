@@ -50,6 +50,16 @@ from src.graph_builder import load_graph  # noqa: E402
 CONTAMINATIONS = (0.001, 0.01, 0.04, 0.05, 0.1)
 PAPER_FPR = 0.0656
 PAPER_TPR = 99.04
+# Paper Table VI: (TPR %, FPR %) of the GTAE-IDS ensemble for p = 2..8.
+PAPER_TABLE_VI = {
+    2: (84.47, 8.94),
+    3: (91.02, 7.61),
+    4: (94.72, 6.60),
+    5: (97.16, 6.84),
+    6: (98.44, 6.73),
+    7: (98.72, 5.91),
+    8: (99.04, 6.56),
+}
 PAPER_TABLE_VI_ROW = "Table VI (p=8, FPR 6,56%)"
 PAPER_P = 8
 RULES = ("strict", "tie", "or")
@@ -57,6 +67,8 @@ PROTOCOLS: dict[str, dict[str, str]] = {
     "P_paper": {"graphs": "data/graphs/P_paper", "models": "experiments/P_paper"},
     "T": {"graphs": "data/graphs/T", "models": "experiments/T"},
     "T_fixed": {"graphs": "data/graphs/T_fixed", "models": "experiments/T_fixed"},
+    # cross-dataset, same contamination grid: test benign comes from an *unseen* benign day
+    "ACI": {"graphs": "data/graphs/aci", "models": "experiments/aci"},
 }
 
 FIELDS = [
@@ -306,10 +318,10 @@ def padding_diagnostics(
 
 
 def select_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Per (seed, group): contamination whose benign-calibration FPR is closest to 6.56%."""
+    """Per (p, seed, group): contamination whose benign-calibration FPR is closest to 6.56%."""
     groups: dict[tuple, list[dict[str, Any]]] = {}
     for row in rows:
-        groups.setdefault((row["seed"], row["detector_or_rule"]), []).append(row)
+        groups.setdefault((row["p"], row["seed"], row["detector_or_rule"]), []).append(row)
     selected = []
     for _, candidates in sorted(groups.items(), key=lambda kv: (kv[0][0], str(kv[0][1]))):
         best = min(
@@ -389,10 +401,12 @@ def write_report(
     out_dir: Path,
     report_path: Path,
     selected: dict[str, list[dict[str, Any]]],
-    p: int,
+    ps: list[int],
     diagnostics: list[dict[str, Any]] | None = None,
 ) -> None:
     from src.cic_graph import PAPER_NODES, PAPER_TEST_COUNTS, PAPER_TEST_TOTAL
+
+    p = ps[0]
 
     lines = [
         "# Paper-parity: P_paper và T ở đúng điểm vận hành của paper",
@@ -443,6 +457,58 @@ def write_report(
     if note:
         lines += [note, ""]
 
+    table2_path = REPO_ROOT / "results/P_paper_table2.csv"
+    if table2_path.exists():
+        lines += [
+            "### 1b. Đối chiếu Table II (nút, cạnh) — built vs paper",
+            "",
+            "Sinh bởi `scripts/check_paper_counts.py --all-p`; node chỉ để tham chiếu.",
+            "",
+            "| p | split | node built | node paper | cạnh built | cạnh paper |",
+            "|---:|---|---:|---:|---:|---:|",
+        ]
+        with table2_path.open(encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                lines.append(
+                    f"| {row['p']} | {row['split']} | {row['nodes_built']} | {row['nodes_paper']} | "
+                    f"{row['edges_built']} | {row['edges_paper']} |"
+                )
+        lines += [
+            "",
+            "Hai khác biệt đã biết, không phải lỗi build: (i) `P_paper` **zero-pad** flow ngắn nên "
+            "số cạnh test không đổi theo p (30.041), trong khi cạnh test của paper giảm 38.984 → 33.228, "
+            "tức paper dựng lại tập test theo từng p với điều kiện `n_pkts >= p`; (ii) node test của "
+            "nhóm ít hơn (22.328 vs 40.744) vì cùng một endpoint dịch vụ lặp lại trên nhiều flow, "
+            "trong khi paper đếm nhiều endpoint nguồn tạm thời hơn trên cùng số cạnh.",
+        ]
+
+    pmax = max(ps)
+    per_class_path = out_dir / f"p{pmax}_per_class.csv"
+    if per_class_path.exists():
+        from src.cic_graph import PAPER_TABLE_VII_TPR
+
+        groups: dict[tuple[str, str], list[float]] = {}
+        with per_class_path.open(encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                groups.setdefault((row["detector_or_rule"], row["attack_type"]), []).append(float(row["tpr"]))
+        lines += [
+            "",
+            f"### 1c. Per-class p = {pmax}: P_paper so với paper Table VII",
+            "",
+            "Cùng cấu hình đã chọn (contamination theo calibration benign) và cùng luật vote; "
+            "cột `paper` là Table VII của bài báo.",
+            "",
+            "| lớp | paper TPR | P_paper (luật or) | P_paper (luật tie) |",
+            "|---|---:|---:|---:|",
+        ]
+        for attack in sorted(PAPER_TABLE_VII_TPR):
+            or_vals = groups.get(("or", attack), [])
+            tie_vals = groups.get(("tie", attack), [])
+            lines.append(
+                f"| {attack} | {PAPER_TABLE_VII_TPR[attack]:.2f}% | "
+                f"{_pct(_mean(or_vals))} | {_pct(_mean(tie_vals))} |"
+            )
+
     lines += [
         f"## 2. Điểm vận hành (FPR mục tiêu {_num(100 * PAPER_FPR)}%)",
         "",
@@ -463,6 +529,7 @@ def write_report(
         f"{_num(PAPER_TPR)} | n/a | n/a |",
     ]
     for protocol, rows in selected.items():
+        rows = [r for r in rows if r["p"] == p]
         for rule in ("strict", "tie", "or") + tuple(DETECTOR_NAMES):
             group = [r for r in rows if r["detector_or_rule"] == rule]
             if not group:
@@ -479,6 +546,7 @@ def write_report(
 
     lines += ["", "## 3. Chi tiết theo seed (contamination đã chọn)", ""]
     for protocol, rows in selected.items():
+        rows = [r for r in rows if r["p"] == p]
         lines += [
             f"### {protocol}",
             "",
@@ -494,6 +562,34 @@ def write_report(
                 f"{_pct(row['tpr_at_test_fpr_6.56pct'])} | {_pct(row['tpr_at_test_fpr_1pct'])} |"
             )
         lines.append("")
+
+    lines += [
+        "",
+        "## 3b. Đường cong p (paper Table VI)",
+        "",
+        "Cùng cách chọn contamination theo calibration benign, lặp cho từng p. Cột "
+        "`matched` đặt ngưỡng sao cho FPR thực trên benign test đúng 6,56%, nên so được "
+        "với Table VI; `paper` là số của paper.",
+        "",
+        "| p | paper TPR@FPR 6,56% | P_paper OR TPR@6,56% | P_paper tie TPR@6,56% | "
+        "P_paper AUROC | T OR TPR@6,56% | T AUROC |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for p_row in ps:
+        paper_row = PAPER_TABLE_VI.get(p_row)
+        cells = [
+            str(p_row),
+            f"{paper_row[0]:.2f} / {paper_row[1]:.2f} %" if paper_row else "n/a",
+        ]
+        for protocol in ("P_paper", "T"):
+            rows = [r for r in selected.get(protocol, []) if r["p"] == p_row]
+            rules = ("or", "tie") if protocol == "P_paper" else ("or",)
+            for rule in rules:
+                group = [r for r in rows if r["detector_or_rule"] == rule]
+                cells.append(_pct(_mean([r["tpr_at_test_fpr_6.56pct"] for r in group])))
+            cells.append(_num(_mean([r["auroc"] for r in rows]), 4))
+        lines.append("| " + " | ".join(cells) + " |")
+    lines.append("")
 
     if diagnostics:
         lines += [
@@ -533,7 +629,7 @@ def _best_detector(rows: list[dict[str, Any]]) -> tuple[float, str]:
 
 def _verdict(selected: dict[str, list[dict[str, Any]]]) -> str:
     """One paragraph: matched-FPR TPR is rule-independent (shared score fusion)."""
-    paper_rows = selected.get("P_paper", [])
+    paper_rows = [r for r in selected.get("P_paper", []) if r["p"] == PAPER_P]
     if not paper_rows:
         return (
             "`P_paper` chưa được đánh giá: thiếu checkpoint trong `experiments/P_paper`. "
@@ -542,7 +638,7 @@ def _verdict(selected: dict[str, list[dict[str, Any]]]) -> str:
     paper_or = _rule_mean(paper_rows, "or")
     paper_tie = _rule_mean(paper_rows, "tie")
     best_det, best_name = _best_detector(paper_rows)
-    clean_tie = _rule_mean(selected.get("T", []), "tie")
+    clean_tie = _rule_mean([r for r in selected.get("T", []) if r["p"] == PAPER_P], "tie")
     text = (
         f"`P_paper` đạt {_pct(paper_or)}% TPR ở FPR matched {_num(100 * PAPER_FPR)}% "
         f"với luật OR của code tác giả (luật tie: {_pct(paper_tie)}%; cả ba luật vote "
@@ -583,6 +679,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="regenerate the report from {protocol}_selected.json + padding_diag CSVs "
+        "without re-evaluating any model",
+    )
+    parser.add_argument(
         "--diagnostics",
         action="store_true",
         help="also report AUROC on full-p vs zero-padded test edges",
@@ -601,6 +703,28 @@ def main(argv: list[str] | None = None) -> int:
     )
     out_dir = Path(args.out)
     cache_dir = None if args.no_cache else Path(args.cache_dir)
+    if args.report_only:
+        selected = {}
+        for protocol in args.protocols:
+            path = out_dir / f"{protocol}_selected.json"
+            if not path.exists():
+                raise SystemExit(f"missing {path}; run the protocol first")
+            selected[protocol] = json.loads(path.read_text(encoding="utf-8"))
+        diagnostics = []
+        for protocol in args.protocols:
+            prefix = "" if protocol == "P_paper" else f"{protocol}_"
+            diag_path = out_dir / f"{prefix}p{args.ps[0]}_padding_diag.csv"
+            if not diag_path.exists():
+                continue
+            with diag_path.open(encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    row["auroc"] = float(row["auroc"]) if row["auroc"] else float("nan")
+                    row["attack_edges"] = int(row["attack_edges"])
+                    row["benign_edges"] = int(row["benign_edges"])
+                    diagnostics.append(row)
+        write_report(out_dir, Path(args.report), selected, args.ps, diagnostics or None)
+        print(f"wrote {args.report} (report-only)", flush=True)
+        return 0
 
     selected: dict[str, list[dict[str, Any]]] = {}
     diagnostics: list[dict[str, Any]] = []
@@ -651,13 +775,13 @@ def main(argv: list[str] | None = None) -> int:
                 [r for r in diagnostics if r["protocol"] == protocol and r["p"] == args.ps[0]],
                 ["protocol", "p", "seed", "subset", "attack_edges", "benign_edges", "auroc"],
             )
-        selected[protocol] = [r for r in picks if r["p"] == args.ps[0]]
+        selected[protocol] = picks
         (out_dir / f"{protocol}_selected.json").write_text(
             json.dumps(picks, indent=2), encoding="utf-8"
         )
 
     if args.write_report:
-        write_report(out_dir, Path(args.report), selected, args.ps[0], diagnostics)
+        write_report(out_dir, Path(args.report), selected, args.ps, diagnostics)
         print(f"wrote {args.report}", flush=True)
     return 0
 

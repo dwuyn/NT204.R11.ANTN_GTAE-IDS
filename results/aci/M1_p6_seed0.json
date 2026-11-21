@@ -1,0 +1,208 @@
+{
+  "p": 6,
+  "seed": 0,
+  "model": "experiments/aci/p6/seed0/model.pt",
+  "graph_nodes": 18978,
+  "test_edges": 20000,
+  "train2_edges": 2000,
+  "calibration_edges": 400,
+  "device": "cpu",
+  "use_pe": true,
+  "detector_fit_notes": {},
+  "detectors": {
+    "IForest": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 271,
+      "fp": 24,
+      "tn": 4976,
+      "fn": 14729,
+      "tpr": 0.01806666666666667,
+      "fpr": 0.0048,
+      "precision": 0.9186440677966101,
+      "f1": 0.035436417129780975,
+      "auroc": 0.54327052,
+      "pr_auc": 0.7881907329905127,
+      "tpr_at_fpr": 0.0284,
+      "fpr_at_threshold": 0.0102,
+      "threshold": -0.047057243125984374,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0066
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.012
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.0356
+        }
+      }
+    },
+    "OCSVM": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 107,
+      "fp": 19,
+      "tn": 4981,
+      "fn": 14893,
+      "tpr": 0.0071333333333333335,
+      "fpr": 0.0038,
+      "precision": 0.8492063492063492,
+      "f1": 0.014147824937194235,
+      "auroc": 0.3894808133333334,
+      "pr_auc": 0.7067025836565979,
+      "tpr_at_fpr": 0.010333333333333333,
+      "fpr_at_threshold": 0.009,
+      "threshold": 428.5286619180254,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0058
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.003
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.0126
+        }
+      }
+    },
+    "HBOS": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 203,
+      "fp": 6,
+      "tn": 4994,
+      "fn": 14797,
+      "tpr": 0.013533333333333333,
+      "fpr": 0.0012,
+      "precision": 0.9712918660287081,
+      "f1": 0.02669472023144191,
+      "auroc": 0.5043553466666667,
+      "pr_auc": 0.7539349160648726,
+      "tpr_at_fpr": 0.0632,
+      "fpr_at_threshold": 0.0586,
+      "threshold": -48.89432741940806,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0046
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.0102
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.0258
+        }
+      }
+    },
+    "INNE": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 499,
+      "fp": 59,
+      "tn": 4941,
+      "fn": 14501,
+      "tpr": 0.03326666666666667,
+      "fpr": 0.0118,
+      "precision": 0.8942652329749103,
+      "f1": 0.06414706260444787,
+      "auroc": 0.5360222333333333,
+      "pr_auc": 0.7854651838650774,
+      "tpr_at_fpr": 0.0366,
+      "fpr_at_threshold": 0.015,
+      "threshold": 0.9953129780314931,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0136
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.0192
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.067
+        }
+      }
+    }
+  },
+  "ensembles": {
+    "strict": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 200,
+      "fp": 6,
+      "tn": 4994,
+      "fn": 14800,
+      "tpr": 0.013333333333333334,
+      "fpr": 0.0012,
+      "precision": 0.970873786407767,
+      "f1": 0.026305405760883863,
+      "auroc": 0.4862568666666667,
+      "pr_auc": 0.7501190644014862,
+      "tpr_at_fpr": 0.022,
+      "fpr_at_threshold": 0.008,
+      "threshold": 0.9653985294117647,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0044
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.0102
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.0254
+        }
+      }
+    },
+    "tie": {
+      "n": 20000,
+      "positives": 15000,
+      "negatives": 5000,
+      "tp": 268,
+      "fp": 20,
+      "tn": 4980,
+      "fn": 14732,
+      "tpr": 0.017866666666666666,
+      "fpr": 0.004,
+      "precision": 0.9305555555555556,
+      "f1": 0.03506017791732077,
+      "auroc": 0.4862568666666667,
+      "pr_auc": 0.7501190644014862,
+      "tpr_at_fpr": 0.022,
+      "fpr_at_threshold": 0.008,
+      "threshold": 0.9653985294117647,
+      "per_class_tpr": {
+        "DictionaryBruteForce": {
+          "n": 5000,
+          "tpr": 0.0062
+        },
+        "DoS-Slowloris": {
+          "n": 5000,
+          "tpr": 0.012
+        },
+        "PortScan": {
+          "n": 5000,
+          "tpr": 0.0354
+        }
+      }
+    }
+  }
+}

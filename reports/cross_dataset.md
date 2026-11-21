@@ -1,7 +1,7 @@
-# Cross-dataset: CIC-IDS2018 one day + the wait behind "early detection"
+# Cross-dataset: CIC-IDS2018 + ACI-IoT-2023 và chi phí chờ của "early detection"
 
-**Ngày:** 2026-11-19. **Trạng thái:** đo xong, số liệu ở `results/2018/M1_summary.csv` và `results/wait_p.csv`.
-**Phạm vi:** hai mục MAY còn hở — (a) FPR trên môi trường mới, đúng phần paper không đo (test 2018/ACI chỉ có lưu lượng độc hại); (b) thời gian chờ đủ p gói, đúng phần MDT 1,28 µs/gói bỏ qua.
+**Ngày:** 2026-11-19 (2018, wait) và 2026-11-21 (ACI). **Trạng thái:** đo xong; số liệu ở `results/2018/`, `results/aci/`, `results/wait_p.csv`.
+**Phạm vi:** ba mục MAY — (a) FPR trên CIC-IDS2018 một ngày; (b) FPR trên ACI-IoT-2023 với benign **ngày khác**; (c) thời gian chờ đủ p gói, phần mà MDT 1,28 µs/gói bỏ qua.
 **Nguồn dữ liệu:** `docs/DATA_ACQUISITION.md`; lịch + IP: `configs/cicids2018_schedule.yaml`; xây đồ thị: `scripts/build_cross_dataset_graphs.py`.
 
 ---
@@ -104,7 +104,66 @@ Theo lớp tấn công ở p = 8 (median delay / p95):
 - **PortScan gần như không bao giờ có 8 gói** (0,1%): đường TPR theo p ở p=8 đang chấm các flow quét bằng zero-padding sau khi flow đóng, không phải sau 8 gói. Đây là lý do `delay_p` mới là số đúng cho "thời gian đến quyết định".
 - Benign cũng chờ: median 0,13 s, p95 10,1 s ở p=8 — FPR không chỉ là tỉ lệ, mà là tỉ lệ × độ trễ.
 
-## 6. Tái chạy
+## 6. ACI-IoT-2023 — benign ngày khác, ba lớp TCP (đối chiếu Table VIII/IX)
+
+**Dữ liệu.** 2.352 capture ACI (wired + wireless) đã merge hợp lệ per lớp
+(`scripts/merge_pcaps.py`; `cat` thường làm parser dừng sau file đầu) rồi parse:
+benign 31/10 (9.346 benign), benign 3/11 (14.992), PortScan 30/10 (**426.795** flow —
+97,8% so với 436.502 dòng TCP của ACI), Slowloris 1/11 (9.428), Dictionary-Brute-Force
+2/11 (5.466). Đồng hồ capture **nhanh hơn 4 giờ** so với tên file/README: file
+`2023-10-31-09_02_06_wireless.pcap` bắt đầu ở epoch 1698757326 = **13:02:06 UTC**;
+`configs/aci_iot2023_schedule.yaml` ghi `utc_offset_minutes: -240` (đo, không đoán —
+lần đọc sai đầu tiên cho 0 tấn công).
+
+**Protocol.** Label theo cửa sổ (README không có IP attacker), train trên benign 31/10,
+test = benign **ngày khác** 3/11 (5.000) + 5.000 mỗi lớp tấn công. PortScan vẫn còn
+5.986 flow ≥ 8 gói nên cả ba lớp sống tới p=8. 68.208 flow bị loại là bản trùng của hai
+sniffer (cùng 5-tuple, lệch ≤ 0,5 s).
+
+**Cảnh báo đọc số.** Benign *trong* cửa sổ tấn công bị gán attack (không có IP để tách)
+⇒ TPR là **cận trên**; FPR đo trên ngày benign còn lại nên vẫn là số thật.
+
+| p | paper Table VIII (ACI, tổng) | ACI ensemble `tie` TPR | FPR | AUROC | TPR@1% |
+|---:|---:|---:|---:|---:|---:|
+| 2 | 79,02% | 2,68% | 0,86% | 0,564 | 1,64% |
+| 3 | 88,94% | 1,23% | 0,77% | **0,428** | 1,10% |
+| 4 | 93,21% | 1,78% | 0,87% | 0,477 | 1,62% |
+| 5 | 94,87% | 1,65% | 1,23% | 0,483 | 1,66% |
+| 6 | 96,76% | 2,40% | 0,97% | 0,536 | 2,17% |
+| 7 | 97,88% | 1,76% | 1,70% | 0,550 | 2,45% |
+| 8 | 98,21% | 1,69% | 1,11% | 0,536 | 1,95% |
+
+p=8 từng detector: IForest 0,537 · OCSVM 0,530 · HBOS 0,529 · INNE 0,540 AUROC
+(TPR@1%: 1,95 / 1,43 / 1,92 / 0,63%). Không detector nào vượt 0,55.
+
+p=8 theo lớp (ensemble `tie`, 3 seed) đặt cạnh paper **Table IX** (cùng p=8):
+
+| lớp | paper Table IX | nhóm |
+|---|---:|---:|
+| Port Scan | 99,67% | **2,66%** |
+| DoS Slowloris | 99,56% | **1,76%** |
+| Dictionary Brute Force | — (không có trong Table IX) | **0,66%** |
+| ICMP Flooding | 96,54% | — (ngoài scope TCP) |
+| Ping Sweep | 99,19% | — (ICMP, ngoài scope) |
+| ARP Spoofing | 97,31% | — (không phải IP/TCP) |
+
+Hai lớp giao nhau (PortScan, Slowloris) cách paper ~97 điểm phần trăm; ba lớp còn lại của
+paper nằm ngoài scope TCP của nhóm nên không so được, và lớp Dictionary của nhóm không có
+trong Table IX.
+
+Đọc bảng:
+
+- **Không có tín hiệu chuyển miền.** AUROC 0,43–0,56 ở mọi p, tức quanh mức đoán mò; p=3 còn *dưới* 0,5.
+  Con số 79,02–98,21% của paper là test **chỉ có lưu lượng độc hại** trong cùng môi trường; khi bắt buộc
+  phải tách khỏi benign của **ngày khác**, cùng pipeline không tách được.
+- **Đây không phải lỗi nhãn:** nhãn đã đối chiếu số lượng với chính ACI (PortScan 426.795 ≈ 436.502 dòng TCP),
+  và FPR đo trên 5.000 flow benign thật của ngày 3/11. Nhưng nó cũng **không** phải phép thử công bằng hoàn hảo:
+  benign *trong* cửa sổ tấn công bị gán attack (không có IP), và benign ngày 3/11 đến từ thiết bị/hoạt động
+  khác ngày 31/10 ⇒ đây là **domain shift theo ngày**, đúng thứ paper không đo.
+- So sánh có ý nghĩa nhất là với 2018 (cùng pipeline, cùng cách đo FPR): 2018 AUROC 0,764 ở p=8,
+  ACI 0,536 — môi trường IoT khó hơn hẳn khi benign đổi ngày.
+
+## 7. Tái chạy
 
 ```bash
 # 2018: label -> graph -> train (p2..7: 6m30s; p8: 1m38s) -> eval (1m15s), all CPU
@@ -120,4 +179,26 @@ python -m src.eval --models experiments/2018 --graphs data/graphs/2018 --out res
 
 # wait_p (3 giây)
 python scripts/eval_wait_p.py --out results/wait_p.csv
+
+# P_paper p-curve (Table VI): build all p once (reads 51 GB pcap), train p2..7, eval grid
+python scripts/build_paper_graphs.py --out data/graphs/P_paper --ps 2 3 4 5 6 7 8 --seed 0
+python scripts/train_all.py --graphs data/graphs/P_paper --out experiments/P_paper --ps 2 3 4 5 6 7 --seeds 0 1 2 --device cpu
+python scripts/eval_paper_parity.py --protocols P_paper T ACI --ps 2 3 4 5 6 7 8 \
+  --seeds 0 1 2 --out results/paper_parity --device cpu --write-report --diagnostics
+python scripts/check_paper_counts.py --all-p      # results/P_paper_table2.csv
+
+# ACI: merge valid pcaps -> parse -> label -> graphs -> train -> eval
+for spec in "Benign Pcaps|2023-10-31-*|benign1" "Benign Pcaps|2023-11-03-*|benign2" \
+            "Recon Pcaps|*.pcap|recon" "Brute Force Pcaps|*.pcap|brute" "DoS_Pcaps|*.pcap|slowloris"; do
+  IFS='|' read -r inc glob tag <<< "$spec"
+  python scripts/merge_pcaps.py --include "$inc" --glob "$glob" --out "data/raw/aci/merged/$tag.pcap"
+  python -m src.parse_pcap --pcap "data/raw/aci/merged/$tag.pcap" --out data/processed/aci --day "aci_$tag"
+done
+python scripts/label_aci.py
+python scripts/build_cross_dataset_graphs.py --processed data/processed/aci --out data/graphs/aci \
+  --tags aci_benign1 aci_benign2 aci_recon aci_brute aci_slowloris \
+  --train-tags aci_benign1 --test-benign-tags aci_benign2 --ps 2 3 4 5 6 7 8
+python scripts/train_all.py --graphs data/graphs/aci --out experiments/aci --ps 2 3 4 5 6 7 8 --device cpu
+python -m src.eval --models experiments/aci --graphs data/graphs/aci --out results/aci \
+  --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --device cpu
 ```

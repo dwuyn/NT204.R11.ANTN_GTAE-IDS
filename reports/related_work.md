@@ -112,6 +112,20 @@ paper [1] và các baseline của nó dùng **chia cân bằng benign/attack** (
 
 ---
 
+### 2.4 Đo của nhóm trên chính hai bộ chuyển miền (bổ sung mà paper không có)
+
+Paper chỉ báo TPR trên 2018/ACI vì test của họ **chỉ có lưu lượng độc hại**. Nhóm đo lại
+trên cùng hai bộ nhưng có benign để tính FPR — cùng 25-byte, cùng 4 detector, cùng p=8:
+
+| bộ | test | paper TPR | nhóm TPR | nhóm FPR | nhóm AUROC | nhóm TPR@1% |
+|---|---|---:|---:|---:|---:|---:|
+| CIC-IDS2018 (1 ngày) | 5.000 benign (5 host) + 5.000 Hulk | 98,74% | 5,99% | 1,52% | 0,764 | 5,94% |
+| ACI-IoT-2023 | 5.000 benign **ngày khác** + 15.000 tấn công (3 lớp) | 98,21% | 1,69% | 1,11% | 0,536 | 1,95% |
+
+Hai con số paper là "TPR trên tập toàn tấn công"; hai con số của nhóm là "TPR khi phải
+tách khỏi benign thật". Khoảng cách 98,74 → 5,99 (2018) và 98,21 → 1,69 (ACI) là **giá của
+việc đo FPR**, không phải lỗi cài đặt: cùng pipeline cho AUROC 0,764 (2018) và 0,536 (ACI).
+
 ## 3. Bốn tuyên bố của paper, đối chiếu bằng số đo của nhóm
 
 | Tuyên bố của [1] | Đo được | Kết luận |

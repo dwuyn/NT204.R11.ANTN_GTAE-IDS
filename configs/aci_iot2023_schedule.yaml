@@ -13,10 +13,12 @@
 # procedure as 2017: align the flow-rate peak with the documented window).
 
 dataset: ACI-IoT-2023
-# Measured, not assumed: file 2023-10-31-09_02_06_wireless.pcap starts at epoch 1698757326
-# = 2023-10-31 09:02:06 UTC, i.e. the filename clock and the capture clock agree, and the
-# README's windows (09:00-16:05 for a day whose first file is 09:02) use that same clock.
-utc_offset_minutes: 0
+# Measured, not assumed. File 2023-10-31-09_02_06_wireless.pcap starts at epoch
+# 1698757326 = 2023-10-31 **13:02:06 UTC**, i.e. the filename clock is 4 hours behind the
+# capture clock (EDT, UTC-4). All five merged classes agree: the 2023-10-30 "12:20-15:56"
+# PortScan files hold flows at 16:00-19:57 UTC, and the 2023-11-01 "09:58-10:26" Slowloris
+# files hold 13:58-14:27 UTC. So local = UTC - 240 min.
+utc_offset_minutes: -240
 benign_days: ["2023-10-31", "2023-11-03"]
 
 windows:

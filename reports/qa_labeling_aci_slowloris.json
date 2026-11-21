@@ -1,0 +1,16 @@
+{
+  "flows_read": 9641,
+  "flows_kept": 9640,
+  "duplicates_dropped": 1,
+  "benign": 41,
+  "attack": 9428,
+  "uncertain": 171,
+  "attack_types": {
+    "DoS-Slowloris": 9428
+  },
+  "label_reasons": {
+    "window:DoS-Slowloris": 9428,
+    "outside_window": 41,
+    "flow_started_before_capture": 171
+  }
+}

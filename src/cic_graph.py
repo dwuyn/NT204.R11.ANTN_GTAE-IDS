@@ -64,7 +64,34 @@ PAPER_BENIGN_ROWS = PAPER_TRAIN1 + PAPER_TRAIN2 + PAPER_TEST_BENIGN
 PAPER_TEST_TOTAL = PAPER_TEST_BENIGN + sum(PAPER_TEST_COUNTS.values())  # 33,228
 PAPER_NODES = {"train1": 7023, "train2": 3106, "test": 40744}
 
+# Paper Table II: (nodes, edges) per split and p. Node ids depend on which exact CSV rows
+# are drawn, so node counts are reported and never asserted; edge counts are the contract.
+PAPER_TABLE_II: dict[int, dict[str, tuple[int, int]]] = {
+    2: {"train1": (7160, 5000), "train2": (3736, 2000), "test": (44767, 38984)},
+    3: {"train1": (7144, 5000), "train2": (3351, 2000), "test": (46285, 37971)},
+    4: {"train1": (7135, 5000), "train2": (3145, 2000), "test": (45008, 36964)},
+    5: {"train1": (7135, 5000), "train2": (3143, 2000), "test": (44118, 36093)},
+    6: {"train1": (7129, 5000), "train2": (3136, 2000), "test": (43417, 35482)},
+    7: {"train1": (7112, 5000), "train2": (3126, 2000), "test": (41643, 33974)},
+    8: {"train1": (7023, 5000), "train2": (3106, 2000), "test": (40744, 33228)},
+}
+
 # Paper Table VII does not list these, so they never enter P_paper's test set.
+# Paper Table VII: per-class TPR (%) at p = 8, the paper's own operating point.
+PAPER_TABLE_VII_TPR: dict[str, float] = {
+    "DoS GoldenEye": 99.08,
+    "Heartbleed": 99.52,
+    "DoS Slowhttptest": 99.79,
+    "DoS Slowloris": 99.60,
+    "DoS Hulk": 98.74,
+    "PortScan": 98.50,
+    "DDoS": 99.34,
+    "Infiltration": 99.83,
+    "Web Attack - Brute Force": 99.29,
+    "SSH-Patator": 98.86,
+    "FTP-Patator": 98.85,
+}
+
 PAPER_EXCLUDED_LABELS = (
     "Bot",
     "Web Attack - XSS",

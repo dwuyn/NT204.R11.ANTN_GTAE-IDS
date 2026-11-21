@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.cic_graph import (  # noqa: E402
     PAPER_NODES,
+    PAPER_TABLE_II,
     PAPER_TRAIN1,
     PAPER_TRAIN2,
     PAPER_TEST_BENIGN,
@@ -46,14 +47,52 @@ def _check(name: str, actual: int, expected: int, note: str = "") -> tuple[str, 
     return (name, actual, expected, note or ("" if ok else "MISMATCH"), ok)
 
 
+def _table2_report(root: Path, out: Path) -> int:
+    """Compare built P_paper graph sizes with paper Table II for every p."""
+    rows: list[dict] = []
+    for p, paper in PAPER_TABLE_II.items():
+        for split in ("train1", "train2", "test"):
+            path = root / f"p{p}" / f"{split}.npz"
+            if not path.exists():
+                rows.append(dict(p=p, split=split, nodes_built="", nodes_paper=paper[split][0],
+                                 edges_built="", edges_paper=paper[split][1]))
+                continue
+            graph = load_graph(path)
+            rows.append(dict(
+                p=p, split=split,
+                nodes_built=int(graph.num_nodes), nodes_paper=paper[split][0],
+                edges_built=int(graph.edge_index.shape[1]), edges_paper=paper[split][1],
+            ))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=["p", "split", "nodes_built", "nodes_paper",
+                                                "edges_built", "edges_paper"])
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"{'p':>2} {'split':>7} {'nodes':>7} {'paper':>7} {'edges':>7} {'paper':>7}")
+    for row in rows:
+        print(f"{row['p']:>2} {row['split']:>7} {row['nodes_built']:>7} {row['nodes_paper']:>7} "
+              f"{row['edges_built']:>7} {row['edges_paper']:>7}")
+    print(f"wrote {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--graphs", default="data/graphs/P_paper")
     parser.add_argument("--p", type=int, default=8)
     parser.add_argument("--out", default="results/P_paper_counts.csv")
+    parser.add_argument(
+        "--all-p",
+        action="store_true",
+        help="emit results/P_paper_table2.csv: built (nodes, edges) vs paper Table II for p=2..8",
+    )
+    parser.add_argument("--out-table2", default="results/P_paper_table2.csv")
     args = parser.parse_args(argv)
 
     root = Path(args.graphs)
+    if args.all_p:
+        return _table2_report(root, Path(args.out_table2))
     p_dir = root / f"p{args.p}"
     summary_path = root / "summary.json"
     if not p_dir.is_dir():

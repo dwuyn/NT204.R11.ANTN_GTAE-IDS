@@ -1,0 +1,10 @@
+protocol,p,seed,subset,attack_edges,benign_edges,auroc
+P_paper,2,0,all_edges,25041,5000,0.5090707080388164
+P_paper,2,0,full_2_packets,25038,5000,0.5090365125009985
+P_paper,2,0,padded_attacks,3,5000,0.7944666666666667
+P_paper,2,1,all_edges,25041,5000,0.385940841020726
+P_paper,2,1,full_2_packets,25038,5000,0.3858816359134116
+P_paper,2,1,padded_attacks,3,5000,0.8800666666666667
+P_paper,2,2,all_edges,25041,5000,0.3829171678447346
+P_paper,2,2,full_2_packets,25038,5000,0.3828461778097292
+P_paper,2,2,padded_attacks,3,5000,0.9754

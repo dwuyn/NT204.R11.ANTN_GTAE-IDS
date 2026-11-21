@@ -117,6 +117,44 @@ attacks by initiator. Labeling needs a window-membership variant (all flows whos
 the window and whose 5-tuple is not a known background pair), which also means the label quality
 depends on the README window being exact — state that in the eventual report.
 
+## Turning the ACI subset into pipeline inputs
+
+Capture files are per-minute and per-sniffer (wired + wireless), so they are merged per
+class into one valid classic-pcap stream and parsed once per class. **Plain `cat` is wrong**:
+each file starts with a 24-byte global header that a reader interprets as a packet record,
+so parsing stops after the first file (measured: 208 of 4.3M packets read from a 13 GiB
+`cat`-merged file). `scripts/merge_pcaps.py` validates that every global header is identical,
+keeps one and copies only the record areas:
+
+```bash
+mkdir -p data/raw/aci/merged data/processed/aci
+python scripts/merge_pcaps.py --include "Benign Pcaps"       --glob "2023-10-31-*" --out data/raw/aci/merged/benign1.pcap
+python scripts/merge_pcaps.py --include "Benign Pcaps"       --glob "2023-11-03-*" --out data/raw/aci/merged/benign2.pcap
+python scripts/merge_pcaps.py --include "Recon Pcaps"        --out data/raw/aci/merged/recon.pcap
+python scripts/merge_pcaps.py --include "Brute Force Pcaps"  --out data/raw/aci/merged/brute.pcap
+python scripts/merge_pcaps.py --include "DoS_Pcaps"          --out data/raw/aci/merged/slowloris.pcap
+for tag in benign1 benign2 recon brute slowloris; do
+  python -m src.parse_pcap --pcap "data/raw/aci/merged/$tag.pcap" --out data/processed/aci --day "aci_$tag"
+done
+python scripts/label_aci.py          # window-membership labels + wired/wireless dedupe
+```
+
+Merged pcaps are temporary (they duplicate ~27 GiB) and are deleted after parsing. The
+`aci_*` day tags never enter `data/graphs/T`; the ACI experiments read `data/processed/aci`.
+
+**Labelling rule** (`scripts/label_aci.py`): a flow is ATTACK when its start falls inside a
+README window (`configs/aci_iot2023_schedule.yaml`) and BENIGN otherwise; UNCERTAIN when
+the first packet is not SYN-without-ACK. No attacker IPs exist in the README, so benign
+traffic *inside* a window is unavoidably labelled attack — the report must say so.
+
+**Parsed and labelled (2026-11-21).** The capture clock runs 4 h ahead of the filename/README
+clock (`2023-10-31-09_02_06_wireless.pcap` = 13:02:06 UTC), so the schedule uses
+`utc_offset_minutes: -240`. With that offset the labels match the dataset's own counts
+(PortScan 426,795 flows vs 436,502 TCP rows = 97.8%): benign 31/10 = 9,346,
+benign 3/11 = 14,992, Slowloris = 9,428, Dictionary = 5,466; 68,208 wired/wireless
+duplicates dropped. Graphs for p=2..8 live in `data/graphs/aci` (train1/train2 = benign
+31/10, test = benign 3/11 + 5,000 per attack class).
+
 ## Verification performed
 
 ```bash

@@ -224,3 +224,28 @@ Slowhttptest 63.1 s (p95 218 s). Only 0.1% of PortScan flows ever reach 8 packet
 **Consequence.** Any claim of "near real-time" must be stated as "median 0.37 s to
 collect 8 packets, p95 3.8 s, 3-63 s for slow-rate attacks", and the paper's 1.28 us/packet
 is quoted only as model-only compute.
+
+---
+
+## 9. ACI-IoT-2023 protocol (window labels, cross-day split)
+
+**Decision.** The ACI MAY experiment labels by **window membership** (the README has no
+attacker IPs) and splits **by day**: train on benign flows from 2023-10-31, test on benign
+from 2023-11-03 plus up to 5,000 flows per attack class from the PortScan (10-30),
+Slowloris (11-01) and Dictionary-Brute-Force (11-02) windows.
+
+**Evidence.** The capture clock is **4 hours ahead** of the README/filename clock (file
+`2023-10-31-09_02_06_wireless.pcap` starts at epoch 1698757326 = 13:02:06 UTC; the 10-30
+"12:20-15:56" PortScan files hold flows at 16:00-19:57 UTC). With `utc_offset_minutes: -240`
+the labels reproduce the documented volumes: **426,795 PortScan flows** versus 436,502 TCP
+rows in the dataset's own count (97.8%), 9,428 Slowloris, 5,466 Dictionary. The wired and
+wireless sniffers duplicate 68,208 connections; the labeler drops a repeat on the same
+canonical 5-tuple within 0.5 s.
+
+**Consequence.** Benign-inside-window traffic is unavoidably labelled attack, so ACI TPR is
+an upper bound and ACI FPR is measured only on the *other* benign day (14,992 flows, 14,085
+of them with >= 8 packets). All three attack classes survive to p=8 (5,000 edges each;
+PortScan retains 5,986 flows with >= 8 packets), so the per-p table is complete rather than
+silently dropping a class. The p-curve is compared against the paper's Table VIII ACI column
+(79.02/88.94/93.21/94.87/96.76/97.88/98.21%) and the per-class p=8 numbers against Table IX
+(Port Scan 99.67%, DoS Slowloris 99.56%); both must be read with the label bias in mind.

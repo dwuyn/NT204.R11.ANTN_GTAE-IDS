@@ -1,0 +1,13 @@
+{
+  "flows_read": 10826,
+  "flows_kept": 10814,
+  "duplicates_dropped": 12,
+  "benign": 9346,
+  "attack": 0,
+  "uncertain": 1468,
+  "attack_types": {},
+  "label_reasons": {
+    "flow_started_before_capture": 1468,
+    "outside_window": 9346
+  }
+}

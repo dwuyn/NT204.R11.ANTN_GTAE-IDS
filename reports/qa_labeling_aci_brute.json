@@ -1,0 +1,16 @@
+{
+  "flows_read": 6140,
+  "flows_kept": 6135,
+  "duplicates_dropped": 5,
+  "benign": 5,
+  "attack": 5466,
+  "uncertain": 664,
+  "attack_types": {
+    "DictionaryBruteForce": 5466
+  },
+  "label_reasons": {
+    "window:DictionaryBruteForce": 5466,
+    "flow_started_before_capture": 664,
+    "outside_window": 5
+  }
+}

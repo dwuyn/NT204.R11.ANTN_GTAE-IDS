@@ -134,3 +134,31 @@ def test_flows_shorter_than_p_are_dropped(tmp_path):
     p8 = summary["splits"]["p8"]["graphs"]["test"]
     assert p2["edges"] == 3 and p2["attack"] == 2
     assert p8["edges"] == 2 and p8["attack"] == 1
+
+
+def test_cross_day_mode_uses_explicit_tags(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    _write_capture(processed, "b1", [_flow(i, t_first=100.0 + i, label=0) for i in range(4)])
+    _write_capture(processed, "b2", [
+        _flow(0, t_first=100.0, label=0),
+        _flow(1, t_first=101.0, label=0),
+        _flow(2, t_first=200.0, label=1, attack="DoS-Slowloris"),
+    ])
+
+    out = tmp_path / "graphs"
+    summary = build(
+        processed, out, ps=[2], tags=["b1", "b2"], seed=0,
+        train1_n=2, train2_n=1, test_benign_n=1, attack_cap=1,
+        train_tags=["b1"], test_benign_tags=["b2"],
+    )
+    assert summary["split_mode"] == "cross_day"
+    assert summary["cutoff_epoch"] is None
+
+    # b1 ids are 0..3; b2 ids are renumbered 4..6
+    train = load_graph(out / "p2" / "train1.npz")
+    assert set(int(f) for f in train.flow_id) <= {0, 1, 2, 3}
+    test = load_graph(out / "p2" / "test.npz")
+    assert int(test.y.sum()) == 1
+    assert int((test.y == 0).sum()) == 1
+    assert all(int(f) >= 4 for f in test.flow_id[test.y == 0])
