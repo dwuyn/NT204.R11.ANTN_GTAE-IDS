@@ -1,0 +1,10 @@
+protocol,p,seed,subset,attack_edges,benign_edges,auroc
+ACI,2,0,all_edges,15000,5000,0.5260396933333333
+ACI,2,0,full_2_packets,15000,5000,0.5260396933333333
+ACI,2,0,padded_attacks,0,5000,nan
+ACI,2,1,all_edges,15000,5000,0.5115139733333333
+ACI,2,1,full_2_packets,15000,5000,0.5115139733333333
+ACI,2,1,padded_attacks,0,5000,nan
+ACI,2,2,all_edges,15000,5000,0.6601537199999999
+ACI,2,2,full_2_packets,15000,5000,0.6601537199999999
+ACI,2,2,padded_attacks,0,5000,nan

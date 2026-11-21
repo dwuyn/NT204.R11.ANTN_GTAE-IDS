@@ -406,7 +406,9 @@ def write_report(
 ) -> None:
     from src.cic_graph import PAPER_NODES, PAPER_TEST_COUNTS, PAPER_TEST_TOTAL
 
-    p = ps[0]
+    # the headline operating point of paper Tables VI/VII is p = 8; sessions that evaluate
+    # every p must not silently report the p = 2 row here.
+    p = PAPER_P if PAPER_P in ps else max(ps)
 
     lines = [
         "# Paper-parity: P_paper và T ở đúng điểm vận hành của paper",

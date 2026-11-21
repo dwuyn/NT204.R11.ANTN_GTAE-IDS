@@ -151,6 +151,11 @@ Hai lớp giao nhau (PortScan, Slowloris) cách paper ~97 điểm phần trăm; 
 paper nằm ngoài scope TCP của nhóm nên không so được, và lớp Dictionary của nhóm không có
 trong Table IX.
 
+Ở khung paper-parity (`scripts/eval_paper_parity.py`, cùng grid contamination, ngưỡng đặt sao cho
+FPR thực trên benign 3/11 đúng **6,56%** như paper): ACI ensemble `tie` TPR **8,03%**, AUROC
+**0,536**, TPR@1% 1,85% — vẫn cách 98,21% của paper hơn 90 điểm phần trăm. Hai cách đặt ngưỡng
+(contamination 1% của `src.eval` và matched 6,56% của parity) đều cho cùng kết luận.
+
 Đọc bảng:
 
 - **Không có tín hiệu chuyển miền.** AUROC 0,43–0,56 ở mọi p, tức quanh mức đoán mò; p=3 còn *dưới* 0,5.
