@@ -588,10 +588,20 @@ def write_report(
             rules = ("or", "tie") if protocol == "P_paper" else ("or",)
             for rule in rules:
                 group = [r for r in rows if r["detector_or_rule"] == rule]
-                cells.append(_pct(_mean([r["tpr_at_test_fpr_6.56pct"] for r in group])))
+                values = [float(r["tpr_at_test_fpr_6.56pct"]) for r in group]
+                cell = _pct(_mean(values))
+                if protocol == "P_paper" and rule == "or" and len(values) > 1:
+                    cell = f"{cell} ({_pct(min(values))}–{_pct(max(values))})"
+                cells.append(cell)
             cells.append(_num(_mean([r["auroc"] for r in rows]), 4))
         lines.append("| " + " | ".join(cells) + " |")
-    lines.append("")
+    lines += [
+        "",
+        "Cột `P_paper OR` in kèm khoảng min–max giữa 3 seed: p=7 trung bình 26,77% nhưng trải "
+        "1,33–41,65%, p=8 trải 0,83–8,00%. Test chỉ 30.041 edge với 5.000 benign nên ngưỡng "
+        "matched-FPR rất nhạy; đừng đọc một p đơn lẻ như một điểm ổn định.",
+        "",
+    ]
 
     if diagnostics:
         lines += [
