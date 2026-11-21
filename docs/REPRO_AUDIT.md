@@ -54,21 +54,21 @@ Các điểm này loại trừ lỗi cài đặt thô ở feature, kiến trúc,
 
 | p | Ensemble TPR | FPR | AUROC |
 |---|---:|---:|---:|
-| 2 | 8,58% | 5,90% | 0,551 |
-| 4 | 11,70% | 3,62% | 0,625 |
-| 6 | 6,49% | 2,92% | 0,794 |
-| 8 | 11,36% | 2,47% | 0,668 |
+| 2 | 3,30% | 2,89% | 0,505 |
+| 4 | 8,56% | 2,94% | 0,578 |
+| 6 | 14,93% | 2,29% | 0,835 |
+| 8 | 4,18% | 2,79% | 0,594 |
 
 Paper p=8: **TPR 99,04% / FPR 6,56%** (Table VI). Khoảng cách rất lớn.
 
-Các thử nghiệm bổ sung (p=8, seed 0):
+Các thử nghiệm bổ sung (p=8, seed 0; đo trong lần chạy trước retrain 2026-11-16 — artefact của các biến thể full-graph/R đã bị xoá):
 
 | Thử nghiệm | TPR | FPR | AUROC |
 |---|---:|---:|---:|
 | Full train1 graph (5.000 cạnh, K=64, 100 epoch) | 16,3% | 3,0% | 0,67 |
 | Subgraph 1.000 cạnh, K=64 | 1,2% | 1,0% | 0,63 |
 | MLP-AE z=16 / 64 / 256 | 1,3–7,3% | 1–3% | 0,63–0,64 |
-| Bỏ LapPE | ~16–19% | 3% | 0,70 |
+| Bỏ LapPE | 6,36% | 1,23% | 0,682 |
 | Protocol R p=8 | ~6% | 2% | 0,71 |
 
 ---
@@ -81,7 +81,7 @@ Các thử nghiệm bổ sung (p=8, seed 0):
 | RandomForest trên **raw features**, train Tue/Wed → test Thu/Fri | TPR 18,1% @ FPR 6,7%, AUROC 0,924 | Không tách được **lớp tấn công chưa thấy** ở FPR thấp |
 | RandomForest trên **GTAE embeddings** | TPR 99,2–99,6% nhưng FPR 64–71%, AUROC 0,91 | Embedding có tín hiệu nhưng biên benign/attack chồng lấn mạnh |
 | MLP-AE (không đồ thị), z=16/64/256 | TPR 1,3–7,3%, AUROC 0,63–0,64 | Không phải lỗi riêng của graph transformer |
-| Bỏ LapPE (A2) | TPR ~16–19% @ FPR 3%, AUROC 0,70 | PE không phải nguyên nhân chính |
+| Bỏ LapPE (A2) | TPR 6,36% @ FPR 1,23%, AUROC 0,682 | PE không phải nguyên nhân chính |
 | Full graph / subgraph 1.000 / K_max=64 | TPR 1–16%, AUROC 0,63–0,67 | Sampler/K_max không phải nguyên nhân chính |
 | Protocol R (random split) p=8 | TPR ~6% @ FPR 2%, AUROC 0,71 | Không phải chỉ do temporal split |
 | Per-class DDoS / DoS Hulk (p=8) | TPR 0–10% / 0,6–10% | Hai lớp “dễ” cũng không tách được bằng AE |
