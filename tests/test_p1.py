@@ -117,3 +117,24 @@ def test_bonferroni_alpha05_calibration_floor():
 
     assert small.p_decision[0] == 8  # floor prevents any alert
     assert large.p_decision[0] == 2  # min fused p = 4/801 < 0.05/7
+
+
+def test_tpr_at_fpr_matches_roc_operating_point():
+    import numpy as np
+    from src.early_exit import tpr_at_fpr
+
+    y = np.array([0, 0, 0, 0, 1, 1, 1, 1])
+    s = np.array([0.1, 0.2, 0.3, 0.9, 0.4, 0.8, 0.95, 0.99])
+    # FPR budget 0: only scores above every benign count -> 2/4 attacks.
+    assert tpr_at_fpr(y, s, 0.0) == 0.5
+    # FPR budget 0.25 admits the benign at 0.9 -> attacks >= 0.4 all caught.
+    assert tpr_at_fpr(y, s, 0.25) == 1.0
+
+
+def test_tpr_at_fpr_rejects_bad_target():
+    import numpy as np
+    import pytest
+    from src.early_exit import tpr_at_fpr
+
+    with pytest.raises(ValueError):
+        tpr_at_fpr(np.array([0, 1]), np.array([0.1, 0.9]), 1.5)

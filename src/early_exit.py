@@ -112,3 +112,18 @@ def run_early_exit(
         mean_p_total=mean_p_total,
         early_exit_rate_attack=early_attack,
     )
+
+
+def tpr_at_fpr(y_true: np.ndarray, scores: np.ndarray, target_fpr: float) -> float:
+    """TPR of the ROC operating point with the largest FPR not exceeding ``target_fpr``.
+
+    Used to compare P1 with M1 at a *matched* false-positive rate instead of at
+    each method's own threshold (which yields different FPRs).
+    """
+    from sklearn.metrics import roc_curve
+
+    if not 0.0 <= target_fpr <= 1.0:
+        raise ValueError("target_fpr must be in [0, 1]")
+    fpr_curve, tpr_curve, _ = roc_curve(np.asarray(y_true), np.asarray(scores, dtype=np.float64))
+    idx = int(np.searchsorted(fpr_curve, target_fpr, side="right") - 1)
+    return float(tpr_curve[max(idx, 0)])

@@ -204,7 +204,7 @@ section.lead p {
   [Embeddings Z] ─────> Không gian nhúng tiềm ẩn
        │
        ▼
- [Ensemble PyOD] ─────> OCSVM + IForest + HBOS + INNE (Majority Vote)
+ [Ensemble PyOD] ─────> OCSVM + IForest + HBOS + INNE ("Majority Vote" — code thực tế: OR)
 ```
 
 ---
@@ -231,166 +231,178 @@ section.lead p {
     $$\text{Attn}(e_i, e_j) = \text{Softmax}\left(\frac{Q(e_i) K(e_j)^T}{\sqrt{d}}\right) V(e_j)$$
   - **Laplacian Positional Encoding:** Nhúng vector riêng $k=8$ chiều bổ sung vị trí topo đồ thị.
 - **Tập hợp 4 thuật toán phát hiện bất thường (PyOD):**
-  - **OCSVM** (RBF kernel, $\nu=0.05$)
+  - **OCSVM** (RBF kernel, contamination 0,01)
   - **Isolation Forest** (150 cây)
   - **HBOS** (20 bins histogram)
   - **INNE** (100 isolation hyper-spheres)
-  - **Bầu chọn đa số (Majority Vote):** Cảnh báo nếu $\ge 3/4$ hoặc $\ge 2/4$ bộ dò báo động.
+  - **Bầu chọn đa số ("Majority Vote" — code thực tế: OR):** Cảnh báo nếu $\ge 3/4$ hoặc $\ge 2/4$ bộ dò báo động.
 
 ---
 
-## 5. Kết quả Tái hiện Sạch & Mâu thuẫn Thực nghiệm
+## 5. Kết quả Tái hiện (Protocol T, mean ± std 3 seed)
 
-- **Hạ tầng kiểm thử nghiêm ngặt:**
-  - 51 GB pcap CIC-IDS2017 thô, 83 pytest pass, 428 checks audit artifact.
-  - Đã huấn luyện **21 mô hình GTAE** (7 giá trị $p \times 3$ seed) trên Kaggle GPU T4.
-- **Kết quả Protocol T (Temporal sạch: Train Monday, Test Tue–Fri):**
+- **Hạ tầng:** 51 GB pcap CIC-IDS2017 thô, **132 pytest pass**, 428 kiểm tra artefact, 21 mô hình (7 giá trị $p$ × 3 seed).
+- **Protocol T:** train benign Monday, test Tue–Fri (lựa chọn của nhóm để đo khi phân phối trôi theo thời gian).
 
-| $p$ | TPR Tái hiện (Ours) | FPR Tái hiện (Ours) | AUROC | Paper Table VI |
+| $p$ | TPR (Ours) | FPR (Ours) | AUROC | Paper Table VI |
 |---:|---:|---:|---:|---:|
-| 2 | 3,30% | 2,89% | 0,505 | — |
-| 4 | 8,56% | 2,94% | 0,578 | — |
-| 6 | 14,93% | 2,29% | 0,835 | — |
-| **8** | <span class="badge-danger">**4,18%**</span> | **2,79%** | **0,594** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
+| 2 | 3,30 ± 1,70% | 2,89% | 0,505 | 84,47% |
+| 4 | 8,56 ± 2,64% | 2,94% | 0,578 | 94,72% |
+| 6 | 14,93 ± 10,87% | 2,29% | **0,835** | 98,44% |
+| **8** | <span class="badge-danger">**4,18 ± 4,30%**</span> | **2,79%** | **0,594 ± 0,106** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
 
-$\implies$ **Khoảng cách khổng lồ:** Mô hình sạch không thể tách biệt tấn công chưa từng gặp ở FPR thấp!
-
----
-
-## 6. Mổ xẻ Mã nguồn gốc Tác giả (Official Code Audit)
-
-Nhóm đã tìm và phân tích trực tiếp mã nguồn gốc do chính tác giả công bố:
-- Repo mô hình: `jalalgh7/graph-representation-learning-for-NIDS`
-- Repo tiền xử lý: `jalalgh7/robust-and-real-time-NIDS`
-
-### Phát hiện 4 nguyên nhân cốt lõi dẫn đến sai lệch:
-1. **Lỗi lệch nhãn gói tin (Label Row-Shift):** Do thiếu nhánh `else` trong vòng lặp gán nhãn.
-2. **Lỗi ngắt kết nối Transformer Encoder:** Transformer bị bỏ qua, không nối vào Decoder!
-3. **Phân chia dữ liệu cùng ngày (Same-day Friday split):** Không dùng Protocol T sạch.
-4. **Luật bầu chọn hợp logic (OR) & Ghép chỉ số:** Bầu chọn $\ge 1$ và ghép FPR của OCSVM.
+- **Không tái lập được**, kể cả trong `P_paper` (đúng test Table VII + luật OR của code): **3,25%** @ FPR 6,56%.
+- **Tự đánh giá:** AUROC theo seed 0,495–0,705; đường cong theo $p$ **không** đơn điệu như paper.
 
 ---
 
-## 7. Chi tiết Sai sót 1 & 2 trong Code Tác giả
+## 6. Đối chiếu Bài báo ↔ Code ↔ CSV của Tác giả
 
-### 1. Lỗi lệch nhãn gói tin (`Tuesday_Packet_Level_Data.ipynb`):
+Repo: `jalalgh7/graph-representation-learning-for-NIDS` (+ `robust-and-real-time-NIDS` cho trích xuất gói tin)
+
+| # | Phát hiện | Kiểm chứng |
+|---|---|---|
+| F1 | Table VII **trùng từng chữ số** với luật **OR** (`votes >= 1`); paper ghi *majority voting* | ✔ |
+| F2 | FPR Ensemble công bố **6,56%** ≠ CSV công khai **13,12%** | ✔ |
+| F3 | Mỗi lớp tấn công test trên **một đồ thị riêng**: topo tự lộ nhãn | ✔ cơ chế |
+| F4 | Benign train/test cùng **Friday 70/30** (paper không nêu ngày) | ✔ |
+| F5 | Detector chạy trên **output decoder**, không phải bottleneck | ✔ |
+| F6 | `GraphAutoencoder` không nối encoder và **không chạy được** như công bố | ✔ code |
+| F7 | Nhãn gói tin **trượt hàng** (thiếu `else` + `dropna`) | ✔ cơ chế, chưa định lượng |
+
+$\implies$ Nhóm chỉ khẳng định **mâu thuẫn kiểm tra được**, không suy diễn mô hình thật là gì.
+
+---
+
+## 7. Chi tiết F1 + F2: Luật Ensemble & Điểm Vận hành
+
+**Paper (tr. 4033):** *"we introduce a majority voting ensemble classifier"*
+
+**Code (`GTAE_8pkt.ipynb`, cell 60):**
 ```python
-if float(epoch_time) >= ftp_start and float(epoch_time) <= ftp_end:
-    if source_ip == '172.16.0.1' and dst_ip == '192.168.10.50':
-        dict_d_labels[packets] = 6
-    # THIẾU NHÁNH ELSE! -> Gói tin bình thường nền không được gán key!
-# DataFrame dropna() làm cột nhãn bị trượt hàng, gán nhãn tấn công cho gói duyệt web đầu ngày!
+votes = np.sum([prediction == 1 for prediction in combined_predictions], axis=0)
+anomalies_ensemble = (votes >= 1).astype(int)   # OR, không phải đa số
 ```
 
-### 2. Transformer Encoder bị bỏ qua (`GTAE_8pkt.ipynb` Cell 24):
+| p = 8 | OCSVM | IF | HBOS | INNE | **Ensemble** |
+|---|---:|---:|---:|---:|---:|
+| FPR trong **paper** (Table VI) | 4,03 | 4,93 | 4,96 | 4,99 | **6,56** |
+| FPR trong **CSV tác giả** | 8,06 | 9,86 | 9,92 | 9,98 | <span class="badge-danger">**13,12**</span> |
+
+- TPR theo lớp ở Table VII = cột Ensemble (OR) của CSV, **khớp tuyệt đối**.
+- Không thể tái tạo điểm vận hành 99,04% / 6,56% từ artefact công khai.
+
+---
+
+## 8. Chi tiết F3–F6: Thiết lập Đánh giá & Notebook
+
+- **F3 – mỗi lớp một đồ thị:** `create_graph_from_df(test_df)` gọi riêng cho từng lớp. Đồ thị DoS có hub cực lớn, khác hẳn topo benign.
+- **F4 – cùng ngày:** train `Friday_benign_train_70%`, test `Friday_benign_test_30%`. Paper chỉ nói *"snapshot at arbitrary timestamp t"*, nên đây là **điểm yếu phương pháp**, không phải mâu thuẫn.
+- **F5 + F6 – notebook (cell 24):**
 ```python
+self.transformer_encoder = nn.TransformerEncoder(nn.GraphTransformerLayer(...))  # không tồn tại trong torch.nn
 def forward(self, g, features):
     edge_features = self.transformer_encoder(features)
-    decoded_features = self.decoder(features)  # TRUYỀN FEATURES THÔ VÀO DECODER!
-    return decoded_features
+    return self.decoder(features)          # edge_features không được dùng
 ```
-$\implies$ Mô hình thật trong code chỉ là một tầng `nn.Linear(400, 400)` tái tạo `features`. Graph Transformer hoàn toàn không nhận gradient!
+  `execution_count` lộn xộn (cell 24 = 42, cell 41 = 40, cell 60 = 136) $\implies$ **notebook không phản ánh code đã sinh ra kết quả**.
 
 ---
 
-## 8. Chi tiết Sai sót 3 & 4: Data Split & Ghép nối Chỉ số
+## 9. So sánh với Nghiên cứu Liên quan (cùng protocol, p = 8)
 
-### 3. Phân chia dữ liệu sai lệch (Same-Day Split):
-- Paper khẳng định train Monday Benign, test trên các ngày sau.
-- Trong code thực tế: Train trên **Friday Benign 70%**, test trên **Friday Benign 30%** và các đồ thị tấn công riêng biệt $\implies$ Rò rỉ phân phối môi trường mạng cùng phiên.
+| Phương pháp | Đại diện | AUROC (mean ± std) | TPR @ ngưỡng FPR=1% |
+|---|---|---:|---:|
+| M1 GTAE (attention + LapPE) | GTAE-IDS [1] | 0,594 ± 0,106 | 3,65% |
+| **B2 E-GraphSAGE-AE** (mean agg.) | E-GraphSAGE [6], Anomal-E [8] | **0,689 ± 0,021** | **11,30%** |
+| B1 MLP-AE (không đồ thị) | AE kiểu Kitsune [11] | 0,595 ± 0,005 | 6,95% |
+| B0 vector header thô | PBCNN/nPrint, bản unsupervised | 0,698 ± 0,004 | 2,13% |
+| A5 bỏ TTL + checksum | kiểm tra shortcut | 0,675 ± 0,042 | 3,77% |
 
-### 4. Luật Bầu chọn OR & Ghép nối chỉ số:
-- Code thực tế: `anomalies_ensemble = (votes >= 1).astype(int)` (Luật OR: chỉ cần 1 bộ dò báo động).
-- Trong file `Final_Results_8pkt_Anomaly_Detection_2017.csv` của tác giả:
-  - Benign FPR của Ensemble: <span class="badge-danger">**13,12%**</span> (không phải 6,56%).
-  - Benign FPR của riêng OCSVM: **8,06%** (hoặc 6,49% ở file comparative).
-- **Paper đã lấy TPR của Ensemble ($\ge 1$, đạt 99,04%) ghép với FPR của riêng OCSVM (6,56%)!**
-
----
-
-## 9. Đề xuất Cải tiến P1: Calibrated Early-Exit GTAE
-
-Nhằm khắc phục triệt để các hạn chế đo lường và tính thời gian thực, nhóm đề xuất **P1**:
-
-1. **Hiệu chuẩn Conformal P-Value (Tránh bùng nổ FPR):**
-   - Chuyển đổi điểm số bất thường sang conformal p-value trên tập calibration lành tính $\mathcal{C}$:
-     $$\pi_m(x) = \frac{1 + \sum_{c \in \mathcal{C}} \mathbb{I}(s_m(c) \ge s_m(x))}{1 + |\mathcal{C}|}$$
-   - Hợp nhất bằng kiểm định Fisher: $T = -2 \sum_{m=1}^4 \ln(\pi_m) \sim \chi^2(8) \implies$ Bảo đảm $\text{FPR} \le \alpha$.
-2. **Cơ chế Dừng Sớm theo chuỗi gói tin (Sequential Early-Exit):**
-   - Kiểm tra tuần tự tại $p = 2, 3, \dots, 8$ với ngân sách $\alpha_p = \alpha / 7$.
-   - **Báo động ngay lập tức** khi $\pi_{\text{fused}, p} \le \alpha_p$ (dừng thu thập, gán `p_decision = p`).
-   - Đến $p=8$ không vi phạm $\implies$ Kết luận Benign.
+| Tuyên bố của paper | Số đo | Kết luận |
+|---|---|---|
+| Attention cạnh–cạnh là cốt lõi | Mean aggregation tốt hơn | ✘ |
+| Ngữ cảnh đồ thị giúp phát hiện | B0 không đồ thị ≥ M1 | ✘ |
+| Không dùng shortcut định danh | A5 AUROC tăng | ✔ |
+| Real-time 1,28 µs/gói | 15.272 µs/gói end-to-end; 8,2 < 12,1 flow/s | ✘ |
+| > 98% trên 2018 / ACI | 5,99% / 1,69% khi test có benign | ✘ |
 
 ---
 
-## 10. Kết quả Thực nghiệm của P1 (Early-Exit)
+## 10. Ưu / Nhược điểm của GTAE-IDS
 
-*Đánh giá trên quần thể cố định T_fixed (30.907 luồng, trung bình 3 seed, calibration 40% = 800 flow):*
+**Ưu điểm**
+- Duy nhất kết hợp **packet-level + đồ thị + không giám sát** trong nhóm bài liên quan.
+- Không cần nhãn tấn công; đặc trưng không chứa IP/port, không phụ thuộc TTL/checksum (A5).
+- Khung quyết định theo $p$ gói, nền tảng cho phát hiện sớm.
 
-| $\alpha$ mục tiêu | Phương pháp | TPR thực đo | FPR thực đo | APD Tấn công | APD Bình thường | Tỉ lệ dừng sớm |
-|---|---|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 42,46% | 13,57% | 6,44 pkts | 7,41 pkts | 41,57% |
-| **0,05** | Fisher | **47,53%** | **18,86%** | **6,24 pkts** | 7,23 pkts | **46,98%** |
-| **0,10** | Fisher | 49,33% | 22,96% | 6,16 pkts | 7,08 pkts | 48,58% |
-| **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% |
-| **0,05** | Bonferroni | **8,95%** | **3,64%** | 7,75 pkts | 7,91 pkts | 7,70% |
-| **0,10** | Bonferroni | **14,11%** | **5,78%** | 7,56 pkts | 7,84 pkts | 13,22% |
-
-### Điểm nhấn quan trọng:
-- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,64%** và TPR **8,95%**; $\alpha=0,10$ đạt FPR **5,78%** và TPR **14,11%**.
-- **Fisher không kiểm soát FPR:** TPR 42,5–49,3% nhưng FPR **13,6–23,0%** do 4 detector tương quan; chỉ dùng làm exploratory.
-- **TPR@FPR=1%:** Bonferroni 0%, Fisher 2,77%, đều thấp hơn M1 (3,65%) — P1 chưa thắng ở vùng FPR thấp.
-- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,75 gói**; $\alpha=0,10$ xuống **7,56 gói**.
+**Nhược điểm (có số đo)**
+- Embedding tách kém khi phân phối trôi theo thời gian (AUROC ~0,6) và **bất ổn theo seed**.
+- Attention + LapPE không đóng góp, còn tăng phương sai.
+- Đồ thị cửa sổ phải dựng lại line graph: **122 ms/flow**, không đạt thời gian thực.
+- Phiếu cứng 4 detector: không kiểm soát được FPR.
+- Đánh giá trong paper: test toàn tấn công, mỗi lớp một đồ thị, benign cùng ngày.
 
 ---
 
-## 11. Bảng Đối chiếu Kết quả Đa Phương diện (p = 8)
+## 11. Đề xuất A (Tầng Biểu diễn): Encoder Gọn hơn
 
-| Phương pháp | Loại mô hình | Dữ liệu & Giao thức | TPR | FPR | AUROC |
-|---|---|---|---:|---:|---:|
-| **Paper Table VI** | GTAE-IDS | Random / Same-day | **99,04%** | **6,56%** | — |
-| **Official Repo Code** | Disconnected Linear AE | Friday 70/30 (OR vote) | **98,74%** | **13,12%** | — |
-| **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T (Sạch) | **0,50%** | **1,22%** | **0,698** |
-| **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **4,18%** | **2,79%** | **0,594** |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **8,95%** | **3,64%** | **0,662** |
-| **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | **6,01%** | **2,07%** | **0,649** |
-| **A2: No LapPE** | GTAE without PE | Temporal T (Sạch) | **6,36%** | **1,23%** | **0,682** |
-| **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
-| **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
+**Chẩn đoán:** điểm nghẽn nằm ở embedding, attention và LapPE không giúp ích.
+**Đề xuất:** thay attention bằng **mean aggregation** và/hoặc **bỏ LapPE**.
 
-*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (3,65%).*
+| p = 8, protocol T | M1 (gốc) | Bỏ LapPE | Mean aggregation |
+|---|---:|---:|---:|
+| AUROC | 0,594 ± 0,106 | **0,682 ± 0,003** | **0,689 ± 0,021** |
+| TPR @ ngưỡng FPR=1% | 3,65% | **12,46%** | **11,30%** |
+| TPR / FPR (tie) | 4,18% / 2,79% | 6,36% / **1,23%** | **9,78%** / 1,81% |
+| std AUROC giữa seed | 0,106 | **÷35** | **÷5** |
+
+- AUROC +0,09, TPR ở FPR thấp gấp ~3 lần, ổn định hơn nhiều; mean aggregation còn **rẻ hơn** attention.
+- **Giới hạn:** AUROC ~0,69 vẫn chưa đủ để triển khai.
 
 ---
 
-## 12. Minh họa Chương trình Demo (5 Phút)
+## 12. Đề xuất B (Tầng Quyết định): P1 Conformal Early-Exit
 
-- **Script chạy tự động:** `./demo/run_demo.sh`
-  - Mô phỏng luồng giao thông mạng streaming thời gian thực.
-  - Áp dụng mô hình GTAE-IDS kết hợp cơ chế P1 Early-Exit.
+1. **Conformal p-value** trên tập calibration benign $\mathcal{C}$ (800 flow):
+   $$\pi_m(x) = \frac{1 + \sum_{c \in \mathcal{C}} \mathbb{I}(s_m(c) \ge s_m(x))}{1 + |\mathcal{C}|}$$
+2. **Hợp nhất Bonferroni:** $\pi_{\text{fused}} = \min(1, 4\min_m \pi_m)$. FPR $\le \alpha$ khi exchangeable, **không** cần detector độc lập. *(Fisher giả định độc lập, nên chỉ dùng để thăm dò.)*
+3. **Early-exit tuần tự** $p = 2..8$, ngân sách $\alpha_p = \alpha/7$: báo động ngay khi $\pi_{\text{fused},p} \le \alpha_p$.
+
+| α | Fusion | TPR | FPR thực đo | Số gói TB (attack) |
+|---|---|---:|---:|---:|
+| 0,05 | **Bonferroni** | **8,95 ± 3,72%** | **3,64%** (≤ 5%) | 7,75 |
+| 0,10 | **Bonferroni** | **14,11 ± 2,11%** | **5,78%** (≤ 10%) | 7,56 |
+| 0,05 | Fisher (thăm dò) | 47,53% | 18,86% (> α) | 6,24 |
+
+- **Đạt:** giữ FPR ≤ α trên benign **khác ngày** với calibration, điều phiếu cứng không làm được.
+- **Chưa đạt:** AUROC chỉ 0,594 → 0,662; tại FPR=1% Bonferroni có TPR 0% (< M1 3,65%); dừng sớm ít.
+- **Bước tiếp theo:** P1 trên encoder của Đề xuất A (đã có lệnh chạy, `--models experiments/T_egsage`).
+
+---
+
+## 13. Minh họa Chương trình Demo (5 Phút)
+
+- **Script chạy tự động:** `./demo/run_demo.sh` (cần checkpoint + `data/graphs/T_fixed`).
+  - Phát lại các luồng của tập test; mỗi luồng đi qua P1 early-exit từ $p=2$ đến $p=8$.
 
 ```
 Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Value | Alert
 ---------|--------------|------------------------|------------|---------|---------|------
 104821   | ATTACK       | DoS Hulk               | ALERT      | p=4     | 0.0012  | [!]
 104822   | BENIGN       | no_attack_window       | NORMAL     | p=8     | 0.4521  | [OK]
-104823   | ATTACK       | PortScan               | ALERT      | p=3     | 0.0004  | [!]
-104824   | BENIGN       | no_attack_window       | NORMAL     | p=8     | 0.8190  | [OK]
-104825   | ATTACK       | FTP-Patator            | ALERT      | p=2     | 0.0001  | [!]
+104823   | ATTACK       | DoS Hulk               | NORMAL     | p=8     | 0.3170  | [OK]   <- tấn công bị bỏ sót
 ```
-- **Kết quả trực quan:** Tấn công PortScan/FTP được chặn ngay tại $p=2, 3$; lưu lượng lành tính chạy hết 8 gói tin mà không kích hoạt báo động giả.
+- *Bảng trên minh họa **định dạng** output. Trên toàn tập test, P1 Bonferroni α=0,05 chỉ phát hiện 8,95% tấn công (§12); phần lớn tấn công **không** bị chặn.*
 
 ---
 
-## 13. Đóng góp Học thuật & Giá trị Đồ án
+## 14. Kết luận & Hạn chế
 
-1. **Tính trung thực & Phản biện học thuật sâu sắc:**
-   - Không dừng lại ở việc báo cáo kết quả tái hiện âm tính, nhóm đã đào sâu và phát hiện **4 sai sót kỹ thuật** trong mã nguồn mở của bài báo IEEE TIFS 2025.
-   - Làm sáng tỏ nghịch lý: mô hình One-class Autoencoder học đặc trưng header không thể đạt 99% TPR xuyên ngày nếu không rò rỉ phân phối.
-2. **Kỹ thuật phần mềm chuẩn mực:**
-   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 126 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
-3. **Đóng góp giải pháp mới (P1):**
-   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,64%), TPR 8,95%, APD 7,75 gói (giảm 3,1%). Fisher giảm APD còn 6,24 gói nhưng FPR 18,86% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
+1. **Tìm hiểu & tái hiện:** pipeline đầy đủ từ pcap, đúng Table III/V và Fig. 3/4; 132 test, 428 kiểm tra artefact. Con số 99,04% @ 6,56% **không tái lập được** (`T`: 4,18%; `P_paper`: 3,25%).
+2. **Đối chiếu & so sánh:** 7 mâu thuẫn có trích dẫn giữa paper, code và CSV; baseline cùng protocol cho thấy attention, LapPE và đồ thị không phải nguồn tín hiệu; claim real-time không đạt.
+3. **Đề xuất:** (A) encoder gọn hơn: AUROC +0,09, ổn định hơn; (B) conformal early-exit: FPR ≤ α nhưng TPR tăng ít.
+4. **Hạn chế:** 3 seed; số của bài liên quan (trừ B2) là nguồn thứ cấp; chưa định lượng F3 và F7; chưa chạy A + B kết hợp.
 
 ---
 

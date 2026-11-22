@@ -26,7 +26,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
 import torch
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -39,7 +39,7 @@ from src.detectors import (
     rank_normalize,
     vote,
 )
-from src.early_exit import run_early_exit
+from src.early_exit import run_early_exit, tpr_at_fpr
 from src.embed import embed_graph, load_model
 from src.graph_builder import load_graph
 
@@ -248,9 +248,11 @@ def run_p1(
                 min_p = np.min(np.vstack([res.fused_pvalues[p] for p in ps]), axis=0)
                 ranking_score = 1.0 - min_p
                 auroc = float(roc_auc_score(y_true, ranking_score))
-                fpr_curve, tpr_curve, _ = roc_curve(y_true, ranking_score)
-                idx = int(np.searchsorted(fpr_curve, 0.01, side="right") - 1)
-                tpr_at_fpr_1pct = float(tpr_curve[max(idx, 0)])
+                tpr_at_fpr_1pct = tpr_at_fpr(y_true, ranking_score, 0.01)
+                # Matched-FPR operating points: compare with M1 (FPR ~2.8%) and
+                # with P1's own Bonferroni FPRs (~3.6% / ~5.8%) on equal footing.
+                tpr_at_fpr_3pct = tpr_at_fpr(y_true, ranking_score, 0.03)
+                tpr_at_fpr_5pct = tpr_at_fpr(y_true, ranking_score, 0.05)
                 records.append({
                     "seed": seed,
                     "alpha": alpha,
@@ -263,6 +265,8 @@ def run_p1(
                     "early_exit_rate_attack": round(res.early_exit_rate_attack, 4),
                     "auroc": round(auroc, 4),
                     "tpr_at_fpr_1pct": round(tpr_at_fpr_1pct, 4),
+                    "tpr_at_fpr_3pct": round(tpr_at_fpr_3pct, 4),
+                    "tpr_at_fpr_5pct": round(tpr_at_fpr_5pct, 4),
                 })
     return records
 
@@ -340,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     _write_csv(
         results_dir / "P1_summary.csv",
-        ["seed", "alpha", "method", "tpr", "fpr", "mean_p_attack", "mean_p_benign", "mean_p_total", "early_exit_rate_attack", "auroc", "tpr_at_fpr_1pct"],
+        ["seed", "alpha", "method", "tpr", "fpr", "mean_p_attack", "mean_p_benign", "mean_p_total", "early_exit_rate_attack", "auroc", "tpr_at_fpr_1pct", "tpr_at_fpr_3pct", "tpr_at_fpr_5pct"],
         p1_records,
     )
     meta = {

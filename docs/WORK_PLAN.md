@@ -1,6 +1,6 @@
 # GTAE-IDS — Work Plan & Tiến độ (live)
 
-**Cập nhật:** 2026-11-10
+**Cập nhật:** 2026-11-22
 **Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & cải tiến GTAE-IDS
 **Paper neo:** J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, "GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection," *IEEE TIFS*, vol. 20, pp. 4026–4041, 2025, doi: 10.1109/TIFS.2025.3557741.
 **Tài liệu kỹ thuật chi tiết:** [`GTAE-IDS_Research_docs.md`](GTAE-IDS_Research_docs.md) — file này **thay thế trạng thái WBS §7** và là nguồn duy nhất theo dõi tiến độ.
@@ -19,19 +19,28 @@
 | **M2** | Data + parse + label QA + graph debug | `[x]` 5 ngày; đủ p=2..8 (T) + R (2,4,8) + T_fixed |
 | **M3** | GTAE train được | `[x]` 21 model (p2–p8 × 3 seed); GPU T4 100 epoch |
 | **M4** | Detectors + số liệu TPR/FPR | `[x]` M1 126 runs; chẩn đoán bản chất one-class AE |
-| **M5** | So sánh paper + ablation + P1 | `[~]` B0, B1, P1 (calibration 40%), `reports/paper_vs_ours.md`; thiếu ablation/B2/A3 |
+| **M5** | So sánh paper + ablation + P1 | `[x]` B0, B1, B2, A2, A3, A5, P1, `P_paper`, 2018/ACI; mean ± std theo seed (`reports/seed_stats.md`) |
 | **M6** | Báo cáo + slide + demo + bảo vệ | `[~]` report/slides/demo có; đang đồng bộ số P1, chưa tag |
 
 **Tình trạng đồ án:** **ĐÃ HOÀN THÀNH PHẦN LỚN M1–M6**.
 - Đã có báo cáo nghiên cứu chi tiết: [`reports/report.md`](../reports/report.md)
-- Đã có slide thuyết trình Marp 14 slide: [`reports/slides.md`](../reports/slides.md)
+- Đã có slide thuyết trình Marp 16 slide: [`reports/slides.md`](../reports/slides.md)
 - Đã có kịch bản và script demo 5 phút: [`demo/run_demo.sh`](../demo/run_demo.sh)
 - Đã có tài liệu đối chứng 3 bên và phân tích mã nguồn gốc: [`reports/paper_vs_ours.md`](../reports/paper_vs_ours.md) & [`docs/REPRO_AUDIT.md`](REPRO_AUDIT.md)
 - Đã có báo cáo P1 sinh tự động từ CSV: [`reports/P1.md`](../reports/P1.md)
 
 **Còn lại trước khi chốt:** ablation A1–A6/B2, nhãn corrected Engelen (A3), tag H7; số P1 đã được đồng bộ lại theo `results/P1_summary.csv`.
 
-**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 83 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
+**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 132 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
+
+**Cập nhật 2026-11-22 (rà soát trước khi nộp):**
+- [x] Đối chiếu lại từng cáo buộc với PDF bài báo và repo tác giả; viết lại `docs/REPRO_AUDIT.md` §5–§7 thành F1–F7 kèm mức độ kiểm chứng. Đính chính hai điểm sai: paper **không** nêu train Monday; 6,56% là FPR **Ensemble** (OCSVM 4,03%).
+- [x] Thêm `scripts/make_seed_stats.py` → `reports/seed_stats.md` (mean ± std 3 seed) + test.
+- [x] P1 ghi thêm `tpr_at_fpr_3pct`, `tpr_at_fpr_5pct` (so với M1 ở cùng FPR); hàm `src.early_exit.tpr_at_fpr` + test.
+- [x] `reports/report.md` cấu trúc lại theo 4 yêu cầu đề tài; thêm Chương 6 (so sánh bài liên quan, ưu/nhược) và Đề xuất A (encoder mean aggregation / bỏ LapPE).
+- [ ] Chạy P1 trên encoder B2 (`--models experiments/T_egsage --p1-ps 2 4 8`) và chạy lại P1 để có cột matched-FPR — cần checkpoint + `data/graphs/T_fixed`.
+- [ ] Định lượng F3: dựng đồ thị test "mỗi lớp một đồ thị" như code tác giả trên dữ liệu của nhóm.
+
 ---
 
 ## 1. Quyết định đã chốt
@@ -182,9 +191,9 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | B1 MLP-AE ensemble tie | 6,29% | 2,29% | 0,595 | 6,95% |
 | P1 Bonferroni α=0,05 | 8,95% | 3,64% | 0,662 | 0,00% |
 | P1 Bonferroni α=0,10 | 14,11% | 5,78% | 0,662 | 0,00% |
-| P1 Fisher α=0,05 | 47,67% | 17,73% | 0,646 | 6,07% |
+| P1 Fisher α=0,05 | 47,53% | 18,86% | 0,639 | 2,77% |
 
-**A3 reconstruction-error (p=8, mean 3 seed):** TPR **23,65%** @ FPR **4,17%**, AUROC **0,676**; p=2/4 yếu hơn M1. Chi tiết: [`reports/ablation.md`](../reports/ablation.md).
+**A3 reconstruction-error (p=8, mean 3 seed):** TPR **6,01%** @ FPR **2,07%**, AUROC **0,649** (`results/A3_recon.csv`). Chi tiết: [`reports/ablation.md`](../reports/ablation.md).
 
 P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm soát FPR và tăng TPR so với M1 ở vùng FPR ~3–4%, nhưng **chưa vượt M1 tại FPR=1%**; Fisher có TPR cao nhưng FPR không kiểm soát. Chi tiết sinh tự động: [`reports/P1.md`](../reports/P1.md).
 

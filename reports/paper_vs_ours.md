@@ -1,10 +1,8 @@
 # Bảng đối chiếu: Paper vs Baseline vs GTAE-IDS vs P1
 
-> **⚠️ Số liệu trong tệp này là của lần chạy TRƯỚC khi retrain (2026-11-16).**
-> Toàn bộ checkpoint đã được huấn luyện lại từ đầu (recipe: 100 epoch, `--patience 100`, CPU) và mọi CSV/report sinh tự động đã được tái tạo. Nguồn chuẩn hiện tại: `results/M1_summary.csv`, `results/P1_summary.csv`, `results/paper_parity/`, `results/ablation.csv`, `results/latency_summary.json`, `results/engelen_*.csv`; diễn giải: `docs/DECISIONS.md`, `reports/ablation.md`, `reports/P1.md`, `reports/latency.md`.
-> Các số đã thay đổi đáng kể (ví dụ `T` p8 ensemble-tie: TPR **4,18%** @ FPR **2,79%**, AUROC **0,594**; matched FPR 6,56%: `T` **11,54%**, `P_paper` **3,25%**). Các bảng thủ công dưới đây **chưa** được đồng bộ.
+> Số liệu đồng bộ với `results/*.csv` (retrain 2026-11-16). Mean ± std theo seed: [`seed_stats.md`](seed_stats.md). Đối chiếu paper ↔ code ↔ CSV của tác giả: [`../docs/REPRO_AUDIT.md`](../docs/REPRO_AUDIT.md) §5.
 
-**Cập nhật:** 2026-11-10
+**Cập nhật:** 2026-11-22
 **Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & Cải tiến GTAE-IDS
 **Paper:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026–4041, 2025.
 
@@ -14,23 +12,24 @@
 
 | Phương pháp | Loại mô hình | Phân chia dữ liệu | Luật quyết định | TPR | FPR | AUROC | Ghi chú |
 |---|---|---|---|---:|---:|---:|---|
-| **Paper Table VI** | Graph Transformer AE | Random / Same-day | Majority vote | **99,04%** | **6,56%** | — | Ghép TPR Ensemble với FPR OCSVM |
-| **Official Repo Code** | Disconnected Linear AE | Friday 70/30 | Union (votes $\ge 1$) | **98,74%** | **13,12%** | — | Code tác giả `Final_Results_8pkt` |
+| **Paper Table VI** | Graph Transformer AE | Snapshot (code: Friday 70/30) | "Majority vote" (code: OR) | **99,04%** | **6,56%** | — | FPR Ensemble công bố; OCSVM 4,03% (Table VI) |
+| **CSV công khai của tác giả** | Notebook `GTAE_8pkt` (không chạy được như công bố) | Friday 70/30, mỗi lớp 1 đồ thị | Union (votes $\ge 1$) | 98,5–99,8% (theo lớp, = Table VII) | **13,12%** | — | `Final_Results_8pkt_Anomaly_Detection_2017.csv`; FPR ≠ 6,56% của paper |
 | **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **0,50%** | **1,22%** | **0,698** | Ensemble tie yếu; detector INNE đạt 10,21% @ 2,45% |
 | **B1: MLP-AE** | Dense AE (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **6,29%** | **2,29%** | **0,595** | AE chuẩn nén 400d → 64d |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18%** | **2,79%** | **0,594** | Tái hiện sạch đúng mô tả paper |
+| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** | Tái hiện đúng mô tả paper; phương sai seed lớn |
 | **M1 (Official Rules)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | — | — | Không dùng làm kết luận |
 | **P_paper: M1 + Union (luật code)** | Graph Transformer AE | Friday CSV-row, test = paper Table VII | Union (votes $\ge 1$) | **3,25%** @ FPR 6,56% matched | **6,56%** | **0,478** | Dựng đúng Table VII: 30.041/33.228 edge; Heartbleed/Infiltration thiếu CSV; TPR@1% 1,39% |
 | **P_paper: M1 + INNE** | Graph Transformer AE + INNE | Friday CSV-row, test = paper Table VII | Detector đơn | **8,31%** @ FPR 6,56% matched | **6,56%** | **0,590** | Detector tốt nhất trên `P_paper`; TPR@1% = 4,12% |
 | **T sạch @ cùng điểm vận hành** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie | **11,54%** @ FPR 6,56% matched | **6,56%** | **0,594** | Đo bằng cùng pipeline `eval_paper_parity.py` |
 | **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **8,95%** | **3,64%** | **0,662** | TPR@FPR=1% = 0%; Fisher 47,53/18,86 không kiểm soát FPR |
 | **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | Threshold 99th pct | **6,01%** | **2,07%** | **0,649** | Cao hơn M1 ở cả p nhưng p=2/4 kèm FPR 6,31/3,51% |
-| **A2: No LapPE** | GTAE without PE | Temporal T (Sạch) | Ensemble tie | **6,36%** | **1,23%** | **0,682** | Seed variance cao; TPR@1% 12,46% |
+| **A2: No LapPE** (Đề xuất A) | GTAE without PE | Temporal T (Sạch) | Ensemble tie | **6,36%** | **1,23%** | **0,682 ± 0,003** | AUROC ổn định theo seed; TPR@1% 12,46% |
+| **B2: E-GraphSAGE-AE** (Đề xuất A) | Mean aggregation, cùng độ sâu/rộng | Temporal T (Sạch) | Ensemble tie | **9,78%** | **1,81%** | **0,689 ± 0,021** | Attention không cần thiết; TPR@1% 11,30% |
 | **A5: Header hygiene** | GTAE, bỏ TTL + 2 checksum | Temporal T (Sạch) | Ensemble tie | **2,83%** | **2,33%** | **0,675** | Train lại 3 seed; TPR@1% **3,77%** ≥ M1 3,65%, AUROC 0,594 → 0,675 ⇒ không phải shortcut định danh |
 | **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed → Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** | Giới hạn trên phân loại giám sát |
 | **Upper Bound (Same-session RF)** | Random Forest | Same-session (Random) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** | Rò rỉ nhận diện phiên/ngày |
 
-*Ghi chú phương pháp:* các dòng **M1/Ours** dùng ngưỡng riêng của detector ở contamination 0,01 (FPR thực 2,79%). Các dòng **@ FPR 6,56% matched** đặt ngưỡng sao cho FPR thực trên benign test đúng bằng 6,56% — cùng định nghĩa với paper — và grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]`. Vì paper ghép TPR ensemble với FPR của OCSVM, cột FPR ở các dòng `P_paper`/`T sạch` là ngưỡng matched, không phải FPR của một detector cụ thể. Số đo: `results/paper_parity/`, chi tiết: [`paper_parity.md`](paper_parity.md).
+*Ghi chú phương pháp:* các dòng **M1/Ours** dùng ngưỡng riêng của detector ở contamination 0,01 (FPR thực 2,79%). Các dòng **@ FPR 6,56% matched** đặt ngưỡng sao cho FPR thực trên benign test đúng bằng 6,56% — cùng định nghĩa với paper — và grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]`. Cột FPR ở các dòng `P_paper`/`T sạch` là ngưỡng matched với FPR Ensemble công bố trong Table VI (6,56%), không phải FPR của một detector cụ thể. Số đo: `results/paper_parity/`, chi tiết: [`paper_parity.md`](paper_parity.md).
 
 ---
 

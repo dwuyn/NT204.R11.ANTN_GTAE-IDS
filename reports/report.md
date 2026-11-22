@@ -1,265 +1,407 @@
 # BÁO CÁO NGHIÊN CỨU ĐỒ ÁN MÔN HỌC
 ## HỆ THỐNG PHÁT HIỆN XÂM NHẬP MẠNG THỜI GIAN THỰC DỰA TRÊN ĐỒ THỊ BIẾN ĐỔI TỰ MÃ HÓA (GTAE-IDS)
+### TÁI HIỆN ĐỘC LẬP, ĐỐI CHIẾU MÃ NGUỒN GỐC, SO SÁNH VỚI CÁC NGHIÊN CỨU LIÊN QUAN VÀ ĐỀ XUẤT CẢI TIẾN
 
-> **Số liệu đã đồng bộ với CSV chuẩn (2026-11-21; retrain 2026-11-16 + đo bổ sung).**
-> Toàn bộ checkpoint đã được huấn luyện lại từ đầu (recipe: 100 epoch, `--patience 100`, CPU) và mọi CSV/report sinh tự động đã được tái tạo. Nguồn chuẩn hiện tại: `results/M1_summary.csv`, `results/P1_summary.csv`, `results/paper_parity/`, `results/ablation.csv`, `results/latency_summary.json`, `results/engelen_*.csv`; diễn giải: `docs/DECISIONS.md`, `reports/ablation.md`, `reports/P1.md`, `reports/latency.md`.
-> Các bảng thủ công dưới đây đã được cập nhật theo `results/*.csv`; nếu lệch, CSV là nguồn chuẩn.
-### TÁI HIỆN ĐỘC LẬP, PHẢN BIỆN MÃ NGUỒN GỐC VÀ ĐỀ XUẤT CẢI TIẾN P1 (CONFORMAL EARLY-EXIT)
+> **Nguồn số liệu:** mọi con số trong báo cáo được lấy từ các CSV đo trong `results/` (retrain 2026-11-16, đo bổ sung tới 2026-11-21). Bảng phương sai theo seed được sinh tự động bởi `scripts/make_seed_stats.py` → [`seed_stats.md`](seed_stats.md). Nếu có chỗ lệch, CSV là nguồn chuẩn.
 
 ---
 
-**Môn học:** Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập (NT204.R11.ANTN)  
-**Nhóm thực hiện:** Nhóm B  
-**Thời gian hoàn thành:** 10/11/2026
-**Bài báo nghiên cứu cơ sở (Paper neo):**  
+**Môn học:** Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập (NT204.R11.ANTN)
+**Nhóm thực hiện:** Nhóm B
+**Thời gian hoàn thành:** 22/11/2026
+**Bài báo nghiên cứu cơ sở (paper neo):**
 > J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, *"GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection,"* **IEEE Transactions on Information Forensics and Security (TIFS)**, vol. 20, pp. 4026–4041, 2025. DOI: `10.1109/TIFS.2025.3557741`.
 
+**Cấu trúc báo cáo theo yêu cầu đề tài:**
+
+| Yêu cầu | Chương |
+|---|---|
+| Tìm hiểu vấn đề và phương pháp trong bài báo | Chương 1, 2 |
+| Thực hiện lại phương pháp và đánh giá kết quả | Chương 3, 4 |
+| Phân tích, so sánh, đánh giá ưu/nhược so với bài báo liên quan | Chương 5 (đối chiếu mã nguồn gốc), Chương 6 (so sánh với các bài liên quan) |
+| Đề xuất giải pháp cải thiện | Chương 7 |
+
 ---
 
-## TÓM TẮT ĐỒ ÁN (ABSTRACT)
+## TÓM TẮT
 
-Nghiên cứu này thực hiện quy trình tái hiện độc lập toàn diện và phản biện học thuật đối với khung làm việc **GTAE-IDS** (IEEE TIFS 2025) — một mô hình học không giám sát biểu diễn cấu trúc đồ thị luồng mạng cấp độ gói tin để phát hiện tấn công zero-day thời gian thực. Bằng việc xây dựng lại toàn bộ pipeline kỹ thuật sạch từ 51 GB file pcap thô của bộ dữ liệu chuẩn CIC-IDS2017 với 126 bài kiểm thử tự động, nhóm nghiên cứu phát hiện kết quả công bố của bài báo (**TPR 99,04% ở FPR 6,56%**) **không thể tái lập trong môi trường IDS thời gian thực, không rò rỉ dữ liệu** (kết quả tái hiện sạch Protocol T đạt TPR 4,18% ở FPR 2,79%, AUROC 0,594).
+Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình (p = 2..8 × 3 seed), viết 132 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
 
-Qua điều tra chuyên sâu và phân tích pháp chứng mã nguồn mở chính thức của tác giả (tại kho lưu trữ `jalalgh7/graph-representation-learning-for-NIDS` và `jalalgh7/robust-and-real-time-NIDS`), nhóm đã xác định được **4 nguyên nhân kỹ thuật cốt lõi** dẫn đến sự sai lệch:
-1. **Lỗi lệch nhãn gói tin (Label Row-Shift):** Lỗi logic thiếu nhánh `else` trong vòng lặp tiền xử lý khiến cột nhãn tấn công bị trượt hàng, gán nhầm vào lưu lượng bình thường đầu ngày.
-2. **Lỗi ngắt kết nối Transformer Encoder:** Mã nguồn Autoencoder trong repo tác giả tính toán `edge_features` nhưng lại truyền thẳng `features` thô vào `decoder`, khiến Graph Transformer Encoder bị cô lập hoàn toàn và không tham gia vào quá trình huấn luyện hay trích xuất đặc trưng.
-3. **Sai lệch phân chia dữ liệu:** Tác giả không huấn luyện trên ngày thứ Hai sạch (Monday benign) xuyên suốt tuần như công bố, mà huấn luyện và kiểm thử trên cùng ngày thứ Sáu (Friday 70/30 split).
-4. **Quy tắc Ensemble và ghép chỉ số:** Tác giả sử dụng luật hợp logic (OR, `votes >= 1`) thay vì đa số (Majority voting), khiến FPR thực tế trên lưu lượng bình thường tăng vọt lên **13,12%**, nhưng bài báo lại ghép chỉ số TPR của Ensemble (99,04%) với FPR của riêng thuật toán OCSVM (6,56%).
+**Kết quả tái hiện:** con số công bố **TPR 99,04% @ FPR 6,56%** không tái lập được.
+- Protocol `T` (train benign Monday, test Tue–Fri) đạt TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106** (3 seed).
+- Protocol `P_paper` dựng lại đúng thành phần test của Table II/VII và đúng luật OR trong code tác giả, nhưng vẫn chỉ đạt **3,25%** TPR tại cùng FPR 6,56%.
 
-Nhằm giải quyết triệt để các hạn chế của mô hình gốc, nhóm đề xuất **Proposal P1: Calibrated Conformal Fusion & Sequential Early-Exit**. P1 chuyển đổi điểm số bất thường sang conformal p-value trên tập hiệu chuẩn lành tính để kiểm soát FPR thực nghiệm, đồng thời cho phép hệ thống đưa ra quyết định cảnh báo sớm ngay từ $p=2..7$ gói tin đầu tiên mà không cần chờ đủ $p=8$. Với calibration 40% của `train2` (800 flow), Bonferroni đạt **TPR 8,95% @ FPR 3,64%** ở $\alpha=0,05$ và **14,11% @ 5,78%** ở $\alpha=0,10$; Fisher cho TPR 42,5–49,3% nhưng FPR 13,6–23,0%, nên chỉ là kết quả exploratory. Tại FPR=1%, P1 Bonferroni 0% và Fisher 2,77%, chưa vượt M1 (3,65%), nên đóng góp của P1 là operating point có kiểm soát FPR và phân tích trade-off, không phải cải thiện mọi metric.
+**Đối chiếu bài báo với mã nguồn công khai** (Chương 5). Nhóm kiểm chứng được:
+- Table VII trùng khớp từng số với luật **OR** (`votes >= 1`), trong khi bài báo mô tả *majority voting*.
+- FPR Ensemble công bố (6,56%) không khớp CSV công khai của tác giả (13,12%).
+- Mỗi lớp tấn công được test trên **một đồ thị riêng**, benign train/test cùng **một ngày**.
+- Detector chạy trên **output của decoder**, và notebook công bố **không chạy được** như hiện có.
+
+**So sánh với nghiên cứu liên quan** (Chương 6). Các baseline cùng protocol cho thấy:
+- **Attention không phải nguồn tín hiệu**: E-GraphSAGE-AE (mean aggregation) đạt AUROC **0,689 ± 0,021**, cao hơn GTAE.
+- **Ngữ cảnh đồ thị chưa giúp ích**: vector header thô (B0) đạt AUROC **0,698**.
+- **"Real-time" không đạt ở mức triển khai**: 8,2 flow/s, trong khi lưu lượng đến là 12,1 flow/s.
+
+**Đề xuất cải tiến** (Chương 7) gồm hai tầng:
+- **(A) Tầng biểu diễn:** thay attention bằng mean aggregation và bỏ LapPE. Đã đo: AUROC tăng từ 0,594 lên 0,68–0,69, độ lệch chuẩn giữa các seed giảm 5–35 lần, TPR@FPR=1% tăng từ 3,65% lên 11–12%.
+- **(B) Tầng quyết định (P1):** conformal p-value kết hợp early-exit tuần tự theo p. Bonferroni giữ được FPR thực đo ≤ α (3,64% @ α=0,05; 5,78% @ α=0,10), nhưng TPR tăng ít và tại FPR=1% không vượt M1.
+
+Nhóm trình bày cả những tiêu chí **không đạt**: đường cong TPR theo p không đơn điệu, GTAE không vượt baseline không dùng đồ thị.
 
 ---
 
 ## CHƯƠNG 1: GIỚI THIỆU VÀ ĐỘNG CƠ NGHIÊN CỨU
 
-### 1.1 Bài toán Phát hiện Xâm nhập Mạng (NIDS)
-Hệ thống phát hiện xâm nhập mạng đóng vai trò huyết mạch trong phòng thủ an ninh không gian mạng. Phần lớn các NIDS truyền thống dựa trên hai phương pháp chính:
-- **NIDS dựa trên luật (Signature-based):** Sử dụng các mẫu nhận dạng cố định (như tập luật Snort/Suricata). Phương pháp này đạt độ chính xác cao đối với các mối đe dọa đã biết nhưng hoàn toàn bất lực trước tấn công zero-day và các biến thể mã độc đa hình.
-- **NIDS dựa trên thống kê luồng (Statistical Flow-based):** Sử dụng các công cụ như CICFlowMeter để trích xuất 80+ đặc trưng thống kê tổng hợp (thời gian liên gói tin, độ lệch chuẩn độ dài gói, cờ TCP,...). Điểm yếu chí tử của phương pháp này là **độ trễ cao** (phải chờ luồng mạng kết thúc hoặc hết thời gian timeout 120s mới trích xuất được đặc trưng), khiến việc ngăn chặn tấn công theo thời gian thực (in-line prevention) trở nên bất khả thi.
+### 1.1 Bài toán phát hiện xâm nhập mạng (NIDS)
+- **NIDS dựa trên luật (signature-based)** như Snort/Suricata: chính xác với tấn công đã biết nhưng bất lực trước tấn công zero-day.
+- **NIDS dựa trên thống kê luồng (flow-based)**: dùng CICFlowMeter trích 80+ đặc trưng thống kê. Điểm yếu là **độ trễ**: phải chờ luồng kết thúc hoặc hết timeout (120 s) mới có đặc trưng, nên không thể chặn tấn công ngay trên đường truyền (in-line).
+- **NIDS học có giám sát (supervised)**: cần nhãn tấn công, và chủ yếu nhận ra các tấn công giống với dữ liệu huấn luyện.
 
-### 1.2 Động cơ nghiên cứu GTAE-IDS
-Bài báo của Ghadermazi et al. (IEEE TIFS 2025) đề xuất khung làm việc **GTAE-IDS** nhằm giải quyết hai bài toán lớn:
-1. **Phát hiện sớm (Early Detection):** Chỉ sử dụng $p$ gói tin đầu tiên ($p \in \{2, \dots, 8\}$) của mỗi luồng mạng, trích xuất 25 byte đầu của IP/TCP header để ra quyết định ngay khi luồng vừa khởi tạo.
-2. **Học không giám sát (Unsupervised Graph Transformer Autoencoder):** Tận dụng cấu trúc liên kết đồ thị mạng (Graph structure) kết hợp với cơ chế chú ý (Self-Attention) để học phân phối của lưu lượng bình thường (Benign), sau đó sử dụng tập hợp 4 thuật toán phát hiện bất thường (OCSVM, IForest, HBOS, INNE) để gắn cờ các hành vi bất thường mà không cần nhãn tấn công khi huấn luyện.
+### 1.2 Động cơ của GTAE-IDS
+Bài báo đặt ra ba mục tiêu (§I, tr. 4026–4027):
+1. **Phát hiện sớm:** chỉ dùng p gói đầu (p = 2..8) của mỗi luồng, quyết định ngay khi luồng vừa bắt đầu.
+2. **Không cần nhãn tấn công:** học phân phối benign bằng autoencoder trên đồ thị, phát hiện bất thường bằng detector không giám sát.
+3. **Tận dụng ngữ cảnh giữa các luồng:** biểu diễn lưu lượng dưới dạng đồ thị, dùng graph transformer để mỗi luồng "nhìn thấy" các luồng chung đầu mút.
 
----
-
-## CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ PHÂN TÍCH PHƯƠNG PHÁP
-
-### 2.1 Biểu diễn Gói tin và Đồ thị Mạng trong GTAE-IDS
-- **Đặc trưng gói tin (Fig. 3):** Mỗi gói tin TCP/IPv4 được giữ lại 9 byte từ IP Header (bỏ phiên bản, IHL, ToS, TTL, Checksum, Địa chỉ IP nguồn/đích) và 16 byte từ TCP Header (bỏ Source Port, Destination Port, Checksum, Urgent Pointer). Chuỗi 25 byte này được chuẩn hóa chia cho 255 về miền $[0, 1]$.
-- **Hướng truyền thông (Directional Padding, Fig. 4):** Mỗi bước truyền thông được biểu diễn bằng vector 50 chiều. Nếu gói tin theo chiều thuận (Forward - fwd), 25 byte đặc trưng nằm ở nửa đầu, nửa sau chèn 25 số 0. Ngược lại, nếu theo chiều nghịch (Backward - bwd), nửa đầu là 25 số 0, nửa sau chứa 25 byte đặc trưng. Với $p$ gói tin, mỗi cạnh đồ thị mang vector đặc trưng có chiều dài $50 \times p$ (ví dụ: $p=8 \implies 400$ chiều).
-- **Cấu trúc đồ thị snapshot:** Các thực thể mạng được biểu diễn dưới dạng đỉnh $u = (\text{IP}, \text{Port})$, và mỗi luồng giao tiếp là một cạnh nối $e = (u, v)$.
-
-### 2.2 Kiến trúc Line-Graph Transformer Autoencoder
-Thay vì áp dụng Transformer truyền thống lên đỉnh, GTAE mô hình hóa tương tác giữa các luồng bằng cách chuyển đổi sang **Line Graph** $\mathcal{L}(G)$, trong đó các cạnh của đồ thị gốc trở thành các đỉnh của đồ thị đường bao.
-- **Cơ chế Attention trên Line Graph:** Ma trận tự chú ý đa đầu (Multi-Head Attention) được tính toán giữa các cạnh kề nhau chia sẻ chung nút giao tiếp:
-  $$\text{Attn}(e_i, e_j) = \text{Softmax}\left(\frac{(e_i W_Q)(e_j W_K)^T}{\sqrt{d}} + \mathcal{N}(e_i, e_j)\right)(e_j W_V)$$
-- **Laplacian Positional Encoding (LapPE):** Nhúng vector riêng của ma trận Laplacian chuẩn hóa ($k=8$ chiều) để bổ sung thông tin vị trí không gian liên kết đồ thị.
-- **Decoder:** Mạng nơ-ron truyền thẳng (DNN) tái tạo lại vector đặc trưng $50p$ chiều với hàm mất mát MSE.
-
-### 2.3 Mô hình Phát hiện Bất thường & Cơ chế Bầu chọn
-Sau khi huấn luyện Autoencoder trên đồ thị lưu lượng bình thường (Train 1), không gian nhúng tiềm ẩn (Embedding) của tập Train 2 được dùng để huấn luyện 4 thuật toán phát hiện bất thường:
-1. **One-Class SVM (OCSVM):** Tìm siêu phẳng cực đại hóa khoảng cách bao bọc dữ liệu lành tính.
-2. **Isolation Forest (IForest):** Cô lập các điểm dữ liệu bất thường bằng cây quyết định nhị phân ngẫu nhiên.
-3. **Histogram-based Outlier Score (HBOS):** Ước lượng mật độ độc lập qua biểu đồ tần số.
-4. **Isolation-based Neural Network Ensemble (INNE):** Dùng siêu cầu ngẫu nhiên cô lập không gian thưa thớt.
-
-Bài báo công bố sử dụng luật bầu chọn đa số (Majority Voting) giữa 4 bộ dò để đưa ra phán quyết cuối cùng.
+### 1.3 Câu hỏi nghiên cứu của đồ án
+- **RQ1:** Phương pháp có tái lập được từ mô tả của bài báo không? Nếu không, khoảng cách đến từ đâu?
+- **RQ2:** Từng thành phần (đồ thị, attention, LapPE, ensemble) đóng góp bao nhiêu so với các phương pháp liên quan?
+- **RQ3:** Có thể cải thiện ở tầng biểu diễn hoặc tầng quyết định không, và với chi phí nào?
 
 ---
 
-## CHƯƠNG 3: QUÁ TRÌNH TÁI HIỆN VÀ KIỂM THỬ ĐỘC LẬP
+## CHƯƠNG 2: PHƯƠNG PHÁP CỦA BÀI BÁO
 
-### 3.1 Pipeline Tái hiện Chuẩn mực
-Nhóm nghiên cứu đã xây dựng lại toàn bộ pipeline mã nguồn Python độc lập:
-- `src/parse_pcap.py`: Bộ đọc luồng pcap/pcapng streaming tối ưu, quản lý 5-tuple, SYN/FIN handshake, tách luồng idle > 120s.
-- `src/packet_encoder.py`: Trích xuất 25 byte header chính xác theo Fig. 3 và kiểm chứng bằng test vector độc lập.
-- `src/graph_builder.py`: Khởi tạo đồ thị PyG/NetworkX, mã hóa cạnh, hỗ trợ cả hai giao thức chia tách:
-  - **Protocol T (Temporal):** Train trên thứ Hai sạch, Test trên thứ Ba đến thứ Sáu (mô phỏng đúng môi trường thực tế).
-  - **Protocol R (Random):** Chia ngẫu nhiên theo luồng trên toàn bộ các ngày (để đối chứng với paper).
-  - **T_fixed:** Cố định quần thể 30.907 luồng có $\ge 8$ gói tin xuyên suốt $p=2 \dots 8$ để đo chính xác đường cong phụ thuộc $p$.
-- `src/model_gtae.py` & `src/train_gtae.py`: Cài đặt LineGraph Transformer đúng bảng kiến trúc Table III, huấn luyện 21 mô hình (7 giá trị $p \times 3$ seed) trên Kaggle GPU T4 đạt mức giảm MSE $\ge 50\%$.
+### 2.1 Biểu diễn gói tin và đồ thị
+- **Đặc trưng gói tin (Fig. 3):** mỗi gói TCP/IPv4 giữ **9 byte IP header** (bỏ version, IHL, ToS, protocol, địa chỉ IP) và **16 byte TCP header** (bỏ port, options). Tổng 25 byte, chia cho 255.
+- **Hướng truyền (Fig. 4):** mỗi gói là vector 50 chiều. Gói chiều đi (fwd) đặt 25 byte ở nửa đầu, nửa sau là 0; gói chiều về (bwd) ngược lại. p gói cho vector 50p chiều (p = 8 → 400 chiều).
+- **Đồ thị:** nút u = (IP, port), không có đặc trưng nút; mỗi luồng là một cạnh vô hướng mang vector 50p chiều. Bài báo coi dữ liệu nhiều ngày như **"một snapshot tại thời điểm t bất kỳ"** (§IV-B, tr. 4034).
 
-### 3.2 Bộ Kiểm thử Tự động & Đảm bảo Không Rò rỉ (Zero-Leakage)
-- Hệ thống đạt **83/83 test pytest pass** (gồm kiểm tra không chứa IP/Port trong đặc trưng, kiểm tra tính độc lập tuyệt đối giữa tập Train và Test).
-- Script kiểm định tự động `scripts/audit_artifacts.py` thực hiện **428/428 phép kiểm tra chéo** trên toàn bộ 89 MB artifact đã trích xuất.
+### 2.2 Bộ mã hoá graph transformer trên cạnh (GTAE)
+- Attention tính giữa các cạnh **chung đầu mút**, tức là trên **line graph** L(G), theo eq. (4)–(8):
+  $$\text{Attn}(e_i, e_j) = \text{Softmax}\left(\frac{(e_i W_Q)(e_j W_K)^T}{\sqrt{d}}\right)(e_j W_V), \quad e_j \in \mathcal{N}_{\mathcal{L}(G)}(e_i)$$
+- **Laplacian Positional Encoding (LapPE):** vector riêng của Laplacian chuẩn hoá, cộng vào đặc trưng cạnh.
+- **Decoder:** mạng DNN tái tạo lại vector 50p chiều, hàm mất mát MSE. Kiến trúc thay đổi theo p (Table III: p = 8 dùng 6 lớp, 8 head, bottleneck d = 64).
 
----
+### 2.3 Phát hiện bất thường và bầu chọn
+Encoder sau khi huấn luyện trên `train 1` (benign) được dùng để sinh **embedding ở bottleneck** cho `train 2` (benign, không trùng `train 1`). Bốn detector được fit trên các embedding này:
+1. **OCSVM** (One-Class SVM, kernel rbf): tìm siêu phẳng bao lấy dữ liệu benign.
+2. **IForest** (Isolation Forest, 150 cây): cô lập điểm bất thường bằng các cây phân chia ngẫu nhiên.
+3. **HBOS** (Histogram-Based Outlier Score, 20 bin): ước lượng mật độ độc lập theo từng chiều bằng histogram.
+4. **INNE** (*Isolation using Nearest-Neighbor Ensembles*, 100 estimator): cô lập điểm bằng các siêu cầu dựng quanh mẫu con, bán kính là khoảng cách đến láng giềng gần nhất.
 
-## CHƯƠNG 4: PHÁT HIỆN PHẢN BIỆN KHOA HỌC: MỔ XẺ MÃ NGUỒN GỐC CỦA TÁC GIẢ
+Bài báo mô tả luật kết hợp là **majority voting** (§III-B, tr. 4033). Contamination được chọn bằng grid `{0,001; 0,01; 0,04; 0,05; 0,1}` (Table V).
 
-Khi đánh giá mô hình tái hiện sạch dưới Protocol T, nhóm ghi nhận kết quả rất thấp: TPR chỉ đạt **4,18%** ở FPR **2,79%** (AUROC 0,594) tại $p=8$, hoàn toàn mâu thuẫn với con số **99,04%** của bài báo.
-Nhóm đã tiến hành điều tra kỹ thuật sâu trên các kho lưu trữ mã nguồn của tác giả chính (Jalal Ghadermazi) và phát hiện **4 sai sót kỹ thuật mang tính hệ thống**:
+### 2.4 Kết quả công bố
+- Table VI, p = 8: Ensemble **TPR 99,04% / FPR 6,56%**; các detector đơn có FPR 4,03–4,99%.
+- Table VII: TPR theo từng lớp tấn công đều > 98,5%.
+- Table VIII: TPR > 98% trên CIC-IDS2018 và ACI-IoT-2023. Lưu ý: các tập test này **chỉ có lưu lượng tấn công**, nên không đo được FPR.
+- Table XII: thời gian suy luận **1,28 µs/gói**.
 
-### 4.1 Lỗi lệch nhãn gói tin do cấu trúc `if` thiếu `else` (`data_extraction/*.ipynb`)
-Trong mã nguồn trích xuất dữ liệu của tác giả:
-```python
-if float(epoch_time) >= ftp_start and float(epoch_time) <= ftp_end:
-    if source_ip == '172.16.0.1' and dst_ip == '192.168.10.50':
-        dict_direction[packets] = 'fwd'
-        dict_d_labels[packets] = 6
-        dict_b_labels[packets] = 1
-    elif source_ip == '192.168.10.50' and dst_ip == '172.16.0.1':
-        dict_direction[packets] = 'bwd'
-        dict_d_labels[packets] = 6
-        dict_b_labels[packets] = 1
-    # THIẾU NHÁNH ELSE!
-else:
-    dict_direction[packets] = 'unknown'
-    dict_d_labels[packets] = 0
-    dict_b_labels[packets] = 0
-```
-Khi gói tin nằm trong khung giờ tấn công nhưng thuộc về các địa chỉ IP bình thường nền, từ điển `dict_d_labels` **không được gán giá trị**. Khi tạo DataFrame:
-```python
-payload_byte_data['Epoch Time'] = pd.DataFrame(dict_epochtime.values())
-payload_byte_data['Class Label'] = pd.DataFrame(dict_d_labels.values())
-payload_byte_data = payload_byte_data.dropna()
-```
-Số phần tử của nhãn ít hơn số gói tin thực tế, khiến toàn bộ cột nhãn bị **dịch chuyển hàng (Row-Shift)**: gói tin bình thường duyệt web đầu ngày (như Microsoft Bing port 80) bị gán nhãn thành tấn công `FTP-Patator` (Class 6).
+### 2.5 Những điểm bài báo không mô tả rõ
+Đây là các điểm ảnh hưởng trực tiếp tới khả năng tái lập. Nhóm phải tự giả định (xem `docs/REPRO_AUDIT.md` §1):
 
-### 4.2 Lỗi ngắt kết nối Graph Transformer Encoder (`GTAE_8pkt.ipynb`)
-Tại Cell 24 của file huấn luyện chính:
-```python
-class GraphAutoencoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers):
-        super().__init__()
-        self.transformer_encoder = nn.TransformerEncoder(...)
-        self.decoder = nn.Linear(input_dim, input_dim)
-
-    def forward(self, g, features):
-        edge_features = self.transformer_encoder(features)
-        decoded_features = self.decoder(features)  # TRUYỀN FEATURES THÔ VÀO DECODER!
-        return decoded_features
-```
-Biến `edge_features` (kết quả của Transformer Encoder) bị bỏ qua hoàn toàn. Mô hình thực chất chỉ là một mạng tuyến tính `Linear(400, 400)` tái tạo trực tiếp vector đặc trưng. Cơ chế Graph Transformer được giới thiệu rầm rộ trong paper thực tế **hoàn toàn không hoạt động trong code của tác giả**.
-
-### 4.3 Phân chia dữ liệu sai lệch (Same-Day Split)
-Paper công bố mô hình được huấn luyện trên ngày thứ Hai (Monday) và kiểm thử trên các ngày còn lại. Tuy nhiên trong mã nguồn:
-- Tác giả huấn luyện trên 5.000 luồng của **Friday Benign 70%**.
-- Kiểm thử Benign trên 5.000 luồng của **Friday Benign 30%**.
-Do cùng một môi trường mạng và cùng phiên lưu lượng, mô hình chỉ ghi nhớ phân phối tĩnh của ngày thứ Sáu chứ không thể tổng quát hóa cho các ngày khác.
-
-### 4.4 Quy tắc Bầu chọn OR và ghép nối chỉ số (Cherry-Picking)
-- Trong code tác giả:
-  ```python
-  anomalies_ensemble = (votes >= 1).astype(int)  # LUẬT HỢP OR!
-  ```
-  Chỉ cần 1 trong 4 bộ dò báo bất thường thì tính là tấn công. Điều này đẩy TPR lên cao nhưng đồng thời đẩy **FPR trên Benign lên 13,12%** (được ghi nhận trong file `Final_Results_8pkt_Anomaly_Detection_2017.csv` của chính tác giả).
-- Bài báo đã lấy con số **TPR của Ensemble (99,04%)** ghép chung với con số **FPR của riêng OCSVM (6,56%)** để công bố, tạo ra ảo tưởng về một mô hình vừa có độ nhạy vượt trội vừa có tỷ lệ báo động giả thấp.
+| Điểm chưa rõ | Hệ quả | Lựa chọn của nhóm |
+|---|---|---|
+| Benign train/test lấy từ ngày nào | Không biết có dịch chuyển phân phối giữa train và test không | Protocol `T` (Monday → Tue–Fri) làm chính; `P_paper` (Friday) để đối chứng |
+| Đồ thị test trộn benign + attack hay tách riêng từng lớp | Topo của đồ thị chỉ có attack có thể tự "lộ" nhãn | Trộn chung (đúng tình huống triển khai) |
+| Chiều LapPE, kích thước subgraph khi train, K_max | Ảnh hưởng tới huấn luyện | k = 8, ≤ 200 cạnh, K_max = 32 |
+| Luật hoà phiếu 2–2 | Định nghĩa "majority" với 4 detector | Báo cả `strict` (≥ 3/4) và `tie` (≥ 2/4) |
+| "1,28 µs/gói" đo những công đoạn nào | Không biết claim "real-time" bao gồm những gì | Đo end-to-end trên replay pcap (Chương 4.5) |
 
 ---
 
-## CHƯƠNG 5: SO SÁNH KẾT QUẢ THỰC NGHIỆM ĐỐI CHỨNG
+## CHƯƠNG 3: TÁI HIỆN PHƯƠNG PHÁP
 
-### 5.1 Bảng Tổng hợp Kết quả Đa phương diện (p = 8)
+### 3.1 Pipeline
+Toàn bộ pipeline viết bằng Python/PyTorch thuần (không dùng PyG):
 
-| Phương pháp | Loại mô hình | Phân chia dữ liệu | Luật quyết định | TPR | FPR | AUROC |
-|---|---|---|---|---:|---:|---:|
-| **Paper Table VI** | Graph Transformer AE | Random / Same-day | Majority vote (Công bố) | **99,04%** | **6,56%** | — |
-| **Official Repo Code** | Disconnected Linear AE | Friday 70/30 | Union (votes $\ge 1$) | **98,74%** | **13,12%** | — |
-| **B0: Raw Vector** | PyOD Detectors (Không đồ thị) | Temporal T | Ensemble tie ($\ge 2/4$) | **0,50%** | **1,22%** | **0,698** |
-| **B1: MLP-AE** | Dense AE (Không đồ thị) | Temporal T | Ensemble tie ($\ge 2/4$) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours Sạch)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18%** | **2,79%** | **0,594** |
-| **M1 (Chạy theo luật Code)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | — | — |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **8,95%** | **3,64%** | **0,662** |
-| **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** |
-| **Upper Bound (Same-session RF)** | Random Forest | Same-session (Cùng ngày) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** |
+| Bước | Module | Ghi chú |
+|---|---|---|
+| Đọc pcap, tách luồng | `src/parse_pcap.py` | Streaming; 5-tuple; kết thúc luồng khi idle > 120 s hoặc gặp SYN mới sau FIN/RST |
+| Gán nhãn | `src/label.py` | Lịch tấn công CIC + đối chiếu với CSV CICFlowMeter; gắn nhãn `UNCERTAIN` khi không chắc |
+| Mã hoá 25 byte | `src/packet_encoder.py` | Kiểm chứng bằng test vector theo Fig. 3 |
+| Dựng đồ thị, line graph, LapPE | `src/graph_builder.py`, `src/line_graph.py`, `src/pe.py` | LapPE dùng vector khởi tạo ARPACK có seed |
+| Mô hình | `src/model_gtae.py` | `ARCH` khớp Table III cho p = 2..8 |
+| Huấn luyện | `src/train_gtae.py` | Adam, lr 1e-3, 100 epoch, 50 subgraph/batch |
+| Detector, đánh giá | `src/detectors.py`, `src/eval.py` | Đúng siêu tham số Table V |
 
-*Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector/FPR trước khi kết luận graph transformer tốt hơn. Dòng “M1 (Chạy theo luật Code)” chưa có artifact lưu nên không dùng làm kết luận. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (3,65%).*
+Các protocol đánh giá:
+- **`T` (chính):** train1/train2 lấy benign Monday; test lấy Tue–Fri (5.000 benign + tối đa 5.000 flow mỗi lớp tấn công).
+- **`T_fixed`:** cùng một quần thể 30.907 flow có ≥ 8 gói cho mọi p, để so sánh công bằng giữa các p.
+- **`R`:** chia ngẫu nhiên theo flow, gần với cách hiểu "snapshot" của bài báo.
+- **`P_paper`:** dựng theo dòng CSV CICFlowMeter, đúng số lượng từng lớp như Table VII, đúng grid contamination, đúng luật OR của code (Chương 4.3).
 
-### 5.2. Ablation A3 — Reconstruction-error detector
+**Quy trình huấn luyện:** 21 mô hình (7 giá trị p × 3 seed). Lần đầu chạy trên Kaggle T4; bản cuối (dùng cho mọi số liệu trong báo cáo) được huấn luyện lại từ đầu trên CPU ngày 2026-11-16.
 
-A3 thay 4 detector bằng ngưỡng 99th percentile của reconstruction MSE trên `train2`; không train lại.
+### 3.2 Kiểm thử và chống rò rỉ dữ liệu
+- **132 test `pytest` pass**: không có IP/port trong đặc trưng, các split rời nhau, train chỉ có benign, test cho conformal/early-exit, test cho script thống kê seed.
+- `scripts/audit_artifacts.py`: **428/428** phép kiểm tra chéo trên artefact thật (khoá ngoại packet ↔ flow, mã hoá lại, nhãn, split, dựng lại đồ thị tất định).
 
-| p | M1 TPR/FPR | A3 TPR/FPR | A3 AUROC | ΔTPR (A3−M1) |
-|---:|---:|---:|---:|---:|
-| 2 | 3,30% / 2,89% | 6,23% / 6,31% | 0,425 | +2,93 pp |
-| 4 | 8,56% / 2,94% | 12,15% / 3,51% | 0,519 | +3,59 pp |
-| 8 | 4,18% / 2,79% | 6,01% / 2,07% | 0,649 | +1,83 pp |
+---
 
-A3 cao hơn M1 ở cả ba p, nhưng FPR cũng cao hơn ở p=2/4 (6,31/3,51% so với 2,89/2,94%); chỉ p=8 là tăng TPR mà FPR còn thấp hơn (2,07% vs 2,79%). Vì A3 dùng ngưỡng 99th percentile cố định, cột TPR@FPR=1% của nó trùng TPR (6,23/12,15/6,01%) — không so được với M1 ở cùng FPR. Chi tiết sinh tự động: [`reports/ablation.md`](../reports/ablation.md).
+## CHƯƠNG 4: KẾT QUẢ TÁI HIỆN VÀ ĐÁNH GIÁ
 
-**A2 — bỏ LapPE (p=8):** TPR **6,36%** @ FPR **1,23%**, AUROC **0,682**, TPR@1% **12,46%**. Seed variance lớn (3,79–10,62% TPR), nên LapPE không phải yếu tố quyết định; A2 cao hơn M1 về AUROC (0,682 vs 0,594) và TPR@1% (12,46% vs 3,65%).
+### 4.1 Kết quả chính (p = 8, protocol `T`, mean ± std 3 seed)
 
-**A5 — header hygiene (bỏ TTL + 2 checksum):** zero 5/25 byte mỗi gói (TTL, IP checksum, TCP checksum) rồi **train lại** p8 × 3 seed. Kết quả: TPR 2,83% @ FPR 2,33%, **AUROC 0,675**, **TPR@FPR=1% 3,77%** — so với M1 là 4,18% / 2,79% / 0,594 / 3,65%. Tức bỏ các byte phụ thuộc địa chỉ/đường đi **không** làm giảm khả năng phân biệt (AUROC tăng, TPR@1% tăng nhẹ); TPR ở ngưỡng riêng thấp hơn vì ngưỡng contamination dời theo FPR giảm. Giả thuyết "mô hình ăn shortcut checksum/IP-port" bị bác bỏ bằng số đo. Chi tiết: `results/A5_hygiene.csv`, `reports/ablation.md`.
+| Phương pháp | TPR | FPR | AUROC [min–max] |
+|---|---:|---:|---:|
+| **Paper Table VI** (Ensemble) | 99,04% | 6,56% | — |
+| **M1: GTAE tái hiện** (ensemble tie) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** [0,495–0,705] |
+| M1, chỉ INNE | 8,69 ± 12,30% | 1,84 ± 1,37% | 0,578 ± 0,116 |
 
-### 5.3 Paper-parity: dựng lại tập test theo Table II/VII (`P_paper`)
+**Phương sai giữa các seed rất lớn:** AUROC của 3 seed là 0,705 / 0,581 / 0,495; seed kém nhất gần như đoán ngẫu nhiên. Vì vậy với 3 seed, mọi chênh lệch nhỏ hơn khoảng 1 std **không** đủ để kết luận. Tuy nhiên, khoảng cách tới con số 99% của bài báo lớn hơn hàng chục lần độ lệch chuẩn, nên kết luận "không tái lập được" vẫn đứng vững.
 
-Nghi vấn công bằng: protocol `T` dựng test bằng parser pcap (chỉ giữ flow có ≥ p gói) nên thành phần lớp lệch xa paper — PortScan 204 so với 6.451, Heartbleed 1 so với 1.468, FTP 3.972 so với 174. Để loại trừ khả năng “kết luận âm chỉ là artefact của cách dựng test”, đề tài dựng thêm protocol `P_paper`: lấy **dòng CSV CICFlowMeter làm định nghĩa flow** (đúng thứ paper dùng để đếm edge), chọn đúng số lượng từng lớp theo Table VII, và **zero-pad** các flow ngắn thay vì loại bỏ (`src/cic_graph.py`).
+### 4.2 Đường cong theo p (ensemble tie, mean ± std)
 
-| tập test (p = 8) | edge | node | benign | PortScan | Heartbleed | Infiltration | DoS Hulk |
+| p | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| paper Table II/VII | 33.228 | 40.744 | 5.000 | 6.451 | 1.468 | 1.764 | 5.000 |
+| TPR (%) | 3,30 ± 1,70 | 4,18 ± 1,93 | 8,56 ± 2,64 | 6,31 ± 5,40 | 14,93 ± 10,87 | 6,90 ± 11,87 | 4,18 ± 4,30 |
+| AUROC | 0,505 | 0,504 | 0,578 | 0,678 | **0,835** | 0,711 | 0,594 |
+
+Bài báo cho TPR tăng đơn điệu theo p (84,47% → 99,04%). Ở tái hiện, AUROC cao nhất ở **p = 6** rồi giảm, kèm phương sai tăng mạnh ở p = 7–8.
+
+### 4.3 Dựng lại đúng thiết lập của bài báo (`P_paper`)
+Để loại trừ khả năng "kết quả âm chỉ là do cách dựng tập test của nhóm", nhóm dựng protocol `P_paper`:
+- lấy **dòng CSV CICFlowMeter làm định nghĩa luồng** (đúng cách bài báo đếm cạnh);
+- chọn đúng số lượng từng lớp theo Table VII; **zero-pad** các luồng ngắn thay vì loại bỏ (`src/cic_graph.py`);
+- benign lấy từ Friday, như code của tác giả.
+
+| Tập test (p = 8) | Cạnh | Nút | Benign | PortScan | Heartbleed | Infiltration | DoS Hulk |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Paper Table II/VII | 33.228 | 40.744 | 5.000 | 6.451 | 1.468 | 1.764 | 5.000 |
 | **`P_paper`** | **30.041** | **22.328** | **5.000** | **6.451** | 11 | 34 | **5.000** |
-| `T` (sạch) | 30.907 | 24.030 | 5.000 | 204 | 1 | 4 | 5.000 |
 
-`train1` = 5.000 edge / 7.178 node và `train2` = 2.000 edge / 3.105 node gần như trùng paper (7.023 / 3.106) — bằng chứng paper cũng lấy benign Friday từ CSV. Hai lớp không thể đạt: CSV chỉ có **11 dòng Heartbleed** và **36 dòng Infiltration** flow TCP (parser pcap cho 1 và 4), nên 1.457 + 1.730 edge của paper là **không thể tái lập từ artefact công khai**; `scripts/check_paper_counts.py` ghi nhận `csv_pool_exhausted` thay vì tự sinh dữ liệu.
+Hai lớp **không thể** tái lập từ artefact công khai: CSV chỉ có 11 dòng Heartbleed và 36 dòng Infiltration là luồng TCP, trong đó chỉ 11 và 34 dòng khớp được gói tin trong pcap (`scripts/check_paper_counts.py` báo `csv_pool_exhausted` thay vì tự sinh dữ liệu).
 
-Đánh giá trên `P_paper` (3 seed, grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]` như Table V, luật OR của code tác giả + strict/tie):
-
-| thiết lập | luật | TPR @ FPR 6,56% (matched) | TPR @ FPR 1% | AUROC |
+| Thiết lập | Luật | TPR @ FPR 6,56% (matched) | TPR @ FPR 1% | AUROC |
 |---|---|---:|---:|---:|
-| paper Table VI | majority vote | **99,04%** | — | — |
-| `P_paper` | tie / strict / or | **3,25%** | 1,39% | 0,478 |
+| Paper Table VI | "majority" (thực tế là OR) | **99,04%** | — | — |
+| `P_paper` | tie / strict / OR | **3,25%** | 1,39% | 0,478 |
 | `P_paper` | INNE (detector tốt nhất) | 8,31% | 4,12% | 0,590 |
-| `T` (sạch, cùng pipeline) | tie | 11,54% | 2,79% | 0,594 |
-| `T` (sạch, cùng pipeline) | INNE | 21,21% | 4,80% | 0,578 |
+| `T` (cùng pipeline) | tie | 11,54% | 2,79% | 0,594 |
 
-Ba kết luận:
+**Diễn giải:**
+1. Khớp thành phần tập test **không** tạo ra con số 99%.
+2. Zero-pad không phải nguồn "ăn may": các cạnh đủ 8 gói (DDoS, Hulk, GoldenEye; 17.018 cạnh) có AUROC 0,35 / 0,41 / 0,47 theo seed. Tức là các lớp tấn công chủ lực của bài báo lại chính là phần không tách được.
+3. AUROC < 0,5 nghĩa là các luồng tấn công trông "bình thường" hơn benign. Giải thích khả dĩ: benign Friday của `P_paper` có nhiều luồng ngắn bị zero-pad, nên khác phân phối với train. Đây là điểm cần phân tích thêm (xem [`paper_parity.md`](paper_parity.md)).
 
-1. **Khớp thành phần test không tạo ra 99%.** Ở đúng điểm vận hành của paper (FPR 6,56%) và đúng luật OR của code tác giả, `P_paper` chỉ đạt 3,25% (ensemble) / 8,31% (INNE tốt nhất) — thấp hơn cả `T` (11,54%).
-2. **Zero-pad không phải nguồn “ăn may”** (chẩn đoán trong [`paper_parity.md`](paper_parity.md)): 8.023/30.041 edge test (26,7%) được pad, tập trung ở PortScan (99,9%). AUROC của các edge **đủ 8 gói** (DDoS, DoS Hulk, GoldenEye — 17.018 edge) chỉ **0,35 / 0,41 / 0,47** theo seed; phần pad lại dễ tách hơn (0,70 / 0,82 / 0,73). Nghĩa là các lớp tấn công chủ lực của paper mới là phần **không phân tách được**, không phải flow ngắn.
-3. **Khoảng cách là của mô hình/điểm vận hành, không phải của dữ liệu.** Với cùng detector, cùng grid, cùng ngưỡng matched-FPR, embedding GTAE không đạt AUROC > 0,60 trên cả hai định nghĩa flow; con số 99,04% @ 6,56% không tái lập được.
+### 4.4 Chuyển miền: CIC-IDS2018 và ACI-IoT-2023
+Bài báo chỉ báo TPR trên tập test **toàn tấn công**. Nhóm đo lại có thêm benign để tính được FPR (cùng 25 byte, cùng 4 detector, p = 8):
 
-Chi tiết sinh tự động: [`paper_parity.md`](paper_parity.md); số đo: `results/paper_parity/*.csv`, `results/P_paper_counts.csv`.
+| Bộ dữ liệu | Paper TPR | Nhóm TPR | Nhóm FPR | Nhóm AUROC |
+|---|---:|---:|---:|---:|
+| CIC-IDS2018 (1 ngày, Hulk) | 98,74% | 5,99% | 1,52% | 0,764 |
+| ACI-IoT-2023 (khác ngày) | 98,21% | 1,69% | 1,11% | 0,536 |
+
+### 4.5 Độ trễ thực tế ("real-time")
+Đo bằng cách replay pcap Friday (`reports/latency.md`):
+- Từ lúc luồng đóng đến lúc có cảnh báo: **122 ms/flow** (p50 48 ms), tương đương **15.272 µs/gói**.
+- Chi phí lớn nhất là dựng **line graph** cho cửa sổ 120 s (72 ms) và chạy detector (36 ms).
+- Thông lượng xử lý **8,2 flow/s**, trong khi lưu lượng đến là **12,1 flow/s**, nên **không theo kịp thời gian thực** trên 1 CPU.
+
+Con số 1,28 µs/gói của bài báo chỉ đo phần chạy mô hình trên GPU, không tính trích đặc trưng và dựng đồ thị.
+
+### 4.6 Tự đánh giá theo tiêu chí đặt ra từ đầu
+Kế hoạch (`docs/GTAE-IDS_Research_docs.md` §0) đặt bốn tiêu chí thành công:
+
+| Tiêu chí | Kết quả |
+|---|---|
+| Pipeline end-to-end, 1 lệnh train + 1 lệnh eval | **Đạt** |
+| Có đường cong TPR/FPR theo p | **Đạt**, nhưng xu hướng "TPR tăng theo p" **không đạt** (§4.2) |
+| Bảng "paper vs ours" có giải thích chênh lệch | **Đạt** (Chương 4.3, 5) |
+| GTAE ≥ baseline không đồ thị B0 | **Không đạt**: AUROC B0 0,698 > M1 0,594 (Chương 6) |
 
 ---
 
-## CHƯƠNG 6: ĐỀ XUẤT CẢI TIẾN P1: CALIBRATED CONFORMAL FUSION & EARLY EXIT
+## CHƯƠNG 5: ĐỐI CHIẾU BÀI BÁO VỚI MÃ NGUỒN CÔNG KHAI CỦA TÁC GIẢ
 
-### 6.1 Cơ chế Conformal P-Value và Hợp nhất Điểm số
-Để giải quyết bài toán bùng nổ báo động giả (FPR) khi kết hợp nhiều bộ dò bất thường, P1 sử dụng lý thuyết suy luận bảo đảm phân phối (Conformal Prediction):
-1. Chuẩn hóa điểm bất thường liên tục $s_m(x)$ của mỗi bộ dò thành **conformal p-value** dựa trên tập hiệu chuẩn lành tính $\mathcal{C}$:
-   $$\pi_m(x) = \frac{1 + \sum_{c \in \mathcal{C}} \mathbb{I}(s_m(c) \ge s_m(x))}{1 + |\mathcal{C}|}$$
-2. Hợp nhất các p-value bằng **Bonferroni** hoặc **Fisher**:
-   - Bonferroni: $\pi_{\text{fused}}(x) = \min(1, M \cdot \min_m \pi_m(x))$. Đây là test hợp lệ theo conformal nếu calibration và benign test exchangeable; FPR bị chặn trên bởi $\alpha$.
-   - Fisher: $T = -2 \sum_{m=1}^M \ln(\pi_m(x)) \sim \chi^2(2M)$; $\pi_{\text{fused}}(x) = 1 - F_{\chi^2(2M)}(T)$. Fisher chỉ đúng khi các p-value độc lập; 4 detector trong GTAE tương quan mạnh nên Fisher không còn bảo đảm FPR và chỉ được báo cáo như exploratory.
-   Hệ thống gắn cờ cảnh báo bất thường khi $\pi_{\text{fused}}(x) \le \alpha$.
+Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kết quả) và `jalalgh7/robust-and-real-time-NIDS` (trích xuất gói tin; `graph_generation/*.ipynb` của GTAE đọc trực tiếp file `.pkl` do repo này sinh ra). Chi tiết, kèm số cell và trích đoạn code: [`docs/REPRO_AUDIT.md`](../docs/REPRO_AUDIT.md) §5.
 
-### 6.2 Cơ chế Ra Quyết Định Dừng Sớm (Sequential Early-Exit)
-Thay vì bắt buộc phải thu thập đủ $p=8$ gói tin mới đưa ra quyết định, P1 kiểm tra liên tục tại mỗi bước $p \in \{2, 3, \dots, 8\}$:
-- Ngân sách báo động giả được phân bổ theo nguyên lý Bonferroni: $\alpha_p = \alpha / 7$.
-- Calibration dùng 40% của `train2` (800/2.000 flow), phần còn lại fit detector. Với 400 flow (20%), sàn p-value $4/401 > \alpha/7$ khiến Bonferroni tại $\alpha=0,05$ không thể alert; 800 flow hạ sàn xuống $4/801$ và mở được operating point này.
-- Tại bước $p$, nếu $\pi_{\text{fused}, p}(x) \le \alpha_p \implies$ **Báo động ngay lập tức (Early Exit)**, dừng thu thập gói tin cho luồng này và gán `p_decision = p`.
-- Nếu đến $p=8$ mà không bước nào kích hoạt cảnh báo $\implies$ Kết luận luồng bình thường (Benign), gán `p_decision = 8`.
+**Nguyên tắc:** nhóm chỉ khẳng định những **mâu thuẫn kiểm tra được** giữa bài báo, code và CSV; không suy diễn về ý định của tác giả.
 
-### 6.3 Kết quả Thực nghiệm của P1 trên Quần thể Cố định (T_fixed)
+| # | Phát hiện | Mức độ kiểm chứng |
+|---|---|---|
+| F1 | Cột Ensemble của **Table VII trùng khớp từng chữ số** với output của `anomalies_ensemble = (votes >= 1)`, tức luật **OR** (cell 60 `GTAE_8pkt.ipynb`). Bài báo (tr. 4033) mô tả *majority voting* | Đã kiểm chứng |
+| F2 | Table VI ghi FPR Ensemble **6,56%** (OCSVM 4,03%). CSV công khai của tác giả ghi FPR benign của Ensemble là **13,12%** (OCSVM 8,06%). Artefact công khai không tái tạo được điểm vận hành đã công bố | Đã kiểm chứng |
+| F3 | Mỗi lớp tấn công được dựng thành **một đồ thị test riêng** (`create_graph_from_df` gọi cho từng lớp). Đồ thị chỉ có DoS (hub cực lớn) khác hẳn topo đồ thị benign, nên detector có thể dựa vào cấu trúc làm lối tắt | Đã kiểm chứng (cơ chế); tác động cần thí nghiệm riêng |
+| F4 | Benign train và benign test cùng từ **Friday** (70/30). Bài báo **không** nêu ngày train; đây là điểm yếu phương pháp (không có dịch chuyển phân phối), không phải mâu thuẫn với nội dung bài báo | Đã kiểm chứng |
+| F5 | Detector chạy trên **output của decoder** (`autoencoder(...)` trả về bản tái tạo 400 chiều), không phải embedding ở bottleneck như bài báo mô tả (§IV-C) | Đã kiểm chứng |
+| F6 | Lớp `GraphAutoencoder` công bố không nối encoder vào decoder (`self.decoder(features)`), dùng `nn.GraphTransformerLayer` (không tồn tại trong PyTorch) và có `execution_count` lộn xộn. Kết luận: **notebook không phản ánh code đã sinh ra kết quả**. Nhóm **không** khẳng định mô hình thực tế là `Linear(400, 400)` | Đã kiểm chứng phần code |
+| F7 | Trong repo trích xuất gói tin, gói nền trong cửa sổ tấn công không được gán nhãn (thiếu `else`). Cột nhãn được gán theo vị trí rồi `dropna()`, nên nhãn bị **trượt hàng** | Cơ chế đã kiểm chứng; số luồng bị ảnh hưởng chưa định lượng; xếp là lỗi phụ |
 
-Chi tiết sinh tự động từ CSV: [`reports/P1.md`](../reports/P1.md).
+**Kết luận:** F1 + F2 giải thích vì sao các con số công bố không tái tạo được từ artefact. F3 + F4 + F5 cho thấy thiết lập đánh giá của code dễ hơn nhiều so với tình huống triển khai thật. Phần còn lại của khoảng cách (Chương 4.3) cho thấy, ngay cả khi làm theo đúng thiết lập của bài báo, embedding GTAE vẫn không tách được benign khỏi tấn công.
 
-| $\alpha$ mục tiêu | Phương pháp Fusion | TPR thực đo | FPR thực đo | APD Tấn công (gói) | APD Bình thường (gói) | Tỉ lệ dừng sớm (Attack) | AUROC | TPR@FPR=1% |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 42,46% | 13,57% | 6,44 pkts | 7,41 pkts | 41,57% | 0,64 | 2,77% |
-| **0,05** | Fisher | **47,53%** | **18,86%** | **6,24 pkts** | 7,23 pkts | **46,98%** | 0,64 | 2,77% |
-| **0,10** | Fisher | 49,33% | 22,96% | 6,16 pkts | 7,08 pkts | 48,58% | 0,64 | 2,77% |
-| **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% | 0,66 | 0,00% |
-| **0,05** | Bonferroni | **8,95%** | **3,64%** | 7,75 pkts | 7,91 pkts | 7,70% | 0,66 | 0,00% |
-| **0,10** | Bonferroni | **14,11%** | **5,78%** | 7,56 pkts | 7,84 pkts | 13,22% | 0,66 | 0,00% |
+---
 
-*Calibration: 40% của `train2` (800 flow); detector fit trên 1.200 flow còn lại. Số liệu mean 3 seed trên T_fixed. Score cho AUROC/TPR@FPR=1% là $1-\min_p$ qua các p.*
+## CHƯƠNG 6: SO SÁNH VỚI CÁC NGHIÊN CỨU LIÊN QUAN VÀ ĐÁNH GIÁ ƯU/NHƯỢC ĐIỂM
+
+Chi tiết 12 bài liên quan: [`docs/GTAE-IDS_Research_docs.md`](../docs/GTAE-IDS_Research_docs.md) §3. Bảng số có ghi nguồn: [`related_work.md`](related_work.md).
+
+### 6.1 Định vị GTAE-IDS giữa các hướng tiếp cận
+
+| Bài | Đầu vào | Đồ thị | Học | Phát hiện sớm | Zero-day | Điểm khác chính so với GTAE |
+|---|---|---|---|---|---|---|
+| **GTAE-IDS [1]** | 25 byte header × p gói | Có (nút IP:port) | One-class AE + 4 detector | Có | Có | — |
+| SPIN-IDS [2] | Header + payload, ảnh 2D | Không | Supervised CNN | Có (4–9 gói) | Không | Cùng tác giả; cần nhãn |
+| PBCNN [4] | Byte thô của cả luồng | Không | Supervised CNN | Hạn chế | Không | Cần cả luồng |
+| E-GraphSAGE [6] | NetFlow | Có | Supervised | Không | Không | Mean aggregation thay attention |
+| Anomal-E [8] | NetFlow | Có (nút = IP) | Self-supervised DGI + detector | Không | Có | Cùng mô hình "GNN → detector cổ điển"; báo cả F1 |
+| GraphIDS [10] | NetFlow | Có | GNN + Transformer MAE, end-to-end | Không | Có | Học biểu diễn và phát hiện trong một mục tiêu |
+| Kitsune [11] | Thống kê theo gói | Không | Ensemble AE online | Có (theo gói) | Có | Streaming thật sự, chạy trên thiết bị nhẹ |
+
+**Nhận xét:** GTAE là bài duy nhất trong nhóm kết hợp cả ba yếu tố (packet-level, đồ thị, không giám sát). Đây là điểm mới thật sự của bài báo. Đổi lại, nó không có baseline nào được đo trong cùng điều kiện: Table XI–XIII của bài báo so với các phương pháp supervised hoặc flow-based, trên tập chia cân bằng.
+
+### 6.2 So sánh cùng protocol (nhóm tự cài đặt và đo)
+Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 8, mean ± std 3 seed ([`seed_stats.md`](seed_stats.md)):
+
+| Phương pháp | Đại diện cho | TPR | FPR | AUROC | TPR@FPR=1%* |
+|---|---|---:|---:|---:|---:|
+| M1 GTAE (attention + LapPE) | [1] | 4,18 ± 4,30% | 2,79 ± 1,40% | 0,594 ± 0,106 | 3,65 ± 4,48% |
+| **B2 E-GraphSAGE-AE** (mean aggregation, cùng độ sâu/độ rộng) | [6], encoder của [8] | **9,78 ± 9,76%** | 1,81 ± 1,72% | **0,689 ± 0,021** | **11,30 ± 10,52%** |
+| **A2 GTAE bỏ LapPE** | ablation | 6,36 ± 3,72% | 1,23 ± 0,68% | **0,682 ± 0,003** | **12,46 ± 0,86%** |
+| B1 MLP-AE (không đồ thị) | AE trong [11] | 6,29 ± 1,10% | 2,29 ± 0,17% | 0,595 ± 0,005 | 6,95 ± 1,70% |
+| B0 vector thô (không học biểu diễn) | [4], [5] bản không giám sát | 0,50 ± 0,36% | 1,22 ± 0,05% | 0,698 ± 0,004 | 2,13 ± 0,25% |
+| B0, chỉ HBOS | — | 0,00% | 1,66% | **0,810 ± 0,000** | 0,00% |
+| A3 GTAE + reconstruction MSE | mục tiêu của [10] | 6,01 ± 9,69% | 2,07 ± 1,34% | 0,649 ± 0,012 | 6,01% |
+
+\* Ngưỡng là quantile 99% của điểm trên `train2` (benign Monday). FPR thực trên benign test được ghi trong [`seed_stats.md`](seed_stats.md) và thường > 1% do dịch chuyển phân phối.
+
+### 6.3 Các tuyên bố của bài báo, đối chiếu bằng số đo
+
+| Tuyên bố của [1] | Số đo của nhóm | Kết luận |
+|---|---|---|
+| Graph transformer (attention giữa các cạnh) là thành phần cốt lõi | B2 mean aggregation có AUROC 0,689 ± 0,021, cao hơn và ổn định hơn M1 (0,594 ± 0,106) | **Không xác nhận.** Bài báo không có ablation này |
+| Ngữ cảnh đồ thị giúp phát hiện (Table X: +4,4% TPR) | B0 không dùng đồ thị có AUROC 0,698 (HBOS 0,810) > M1 | **Không xác nhận** trong protocol `T` |
+| Không phụ thuộc shortcut định danh (đã bỏ IP/port) | A5 xoá TTL + 2 checksum rồi train lại: AUROC 0,594 → 0,675 | **Xác nhận**: tín hiệu không đến từ các byte phụ thuộc địa chỉ |
+| Real-time 1,28 µs/gói | 15.272 µs/gói end-to-end; 8,2 < 12,1 flow/s | **Không xác nhận** ở mức triển khai |
+| Tổng quát hoá sang 2018/ACI (> 98%) | TPR 5,99% / 1,69% khi có benign trong test | **Không xác nhận**; bài báo không đo FPR trên 2018/ACI |
+
+### 6.4 Về cách so sánh của bài báo
+- Table XI so GTAE (không giám sát) với các GNN **có giám sát** dùng **flow hoàn chỉnh**, trên tập chia **cân bằng** benign/attack. Đây không phải cùng điều kiện.
+- **Lưu ý khi đọc khoảng cách TPR:** với một ngưỡng cố định (lấy từ benign train2), TPR chỉ được tính trên mẫu tấn công nên **không phụ thuộc vào tỉ lệ benign/attack**; tỉ lệ này chỉ ảnh hưởng tới precision. Vì vậy khoảng cách 98,74% → 5,99% trên CIC-IDS2018 không thể giải thích bằng "mất cân bằng". Với mô hình đồ thị, nguyên nhân hợp lý hơn là **thành phần đồ thị**: đồ thị test chỉ có tấn công (như bài báo) có topo khác hẳn đồ thị trộn benign (như nhóm). Đây chính là phát hiện F3 ở Chương 5.
+
+### 6.5 Tổng hợp ưu/nhược điểm của GTAE-IDS
+
+**Ưu điểm (đã xác nhận được)**
+
+| Ưu điểm | Bằng chứng |
+|---|---|
+| Kết hợp packet-level + đồ thị + không giám sát, chưa bài nào trong nhóm liên quan làm | §6.1 |
+| Không cần nhãn tấn công để học biểu diễn | train chỉ dùng benign; zero-day về nguyên tắc |
+| Đặc trưng 25 byte không chứa IP/port, không phụ thuộc TTL/checksum | test chống rò rỉ; A5 |
+| Kiến trúc cài đặt được, kích thước nhỏ (p = 8: d = 64) | `src/model_gtae.py` |
+| Cho phép quyết định theo p gói (khung cho phát hiện sớm) | P1 (Chương 7) |
+
+**Nhược điểm (có số đo)**
+
+| Nhược điểm | Bằng chứng |
+|---|---|
+| Embedding tách benign/attack kém khi có dịch chuyển phân phối theo thời gian (AUROC ~0,6) | §4.1 |
+| Huấn luyện không ổn định theo seed (AUROC 0,495–0,705) | [`seed_stats.md`](seed_stats.md) |
+| Attention và LapPE không mang lại lợi ích; còn làm kém và bất ổn hơn | B2, A2 (§6.2) |
+| Đồ thị tĩnh theo cửa sổ: phải dựng lại line graph, nên không đạt thời gian thực | §4.5 |
+| Ensemble 4 detector bằng phiếu cứng: không kiểm soát được FPR | §4.3; F1, F2 |
+| Đánh giá trong bài báo: tập test toàn tấn công, đồ thị riêng từng lớp, benign cùng ngày | F3, F4; §4.4 |
+
+---
+
+## CHƯƠNG 7: ĐỀ XUẤT CẢI TIẾN
+
+### 7.1 Chẩn đoán làm cơ sở cho đề xuất
+Từ Chương 4–6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác nhau**:
+1. **Tầng biểu diễn:** embedding tách benign/attack kém và bất ổn theo seed. Attention và LapPE không giúp ích.
+2. **Tầng quyết định:** phiếu cứng của 4 detector không cho phép chọn và **bảo đảm** FPR, và luôn phải chờ đủ p gói.
+
+Đề xuất của nhóm giải quyết lần lượt từng tầng.
+
+### 7.2 Đề xuất A (tầng biểu diễn): bộ mã hoá gọn hơn
+**Nội dung:** thay attention giữa các cạnh bằng **mean aggregation** (E-GraphSAGE-AE, `src/model_egsage.py`, giữ nguyên độ sâu và độ rộng của `ARCH[p]`) và **bỏ LapPE**.
+
+**Lý do:**
+- Attention với softmax trên lân cận line graph có phương sai cao khi hub có bậc lớn (K_max = 32).
+- LapPE có mơ hồ về dấu và phụ thuộc thành phần liên thông, nên thay đổi giữa đồ thị train và test.
+- Mean aggregation và không dùng PE cho biểu diễn ổn định hơn với phân phối dịch chuyển.
+
+**Kết quả đo (p = 8, protocol `T`, 3 seed):**
+
+| | M1 (gốc) | A: bỏ LapPE | A: mean aggregation (B2) |
+|---|---:|---:|---:|
+| AUROC | 0,594 ± 0,106 | **0,682 ± 0,003** | **0,689 ± 0,021** |
+| TPR @ ngưỡng FPR=1% | 3,65 ± 4,48% | **12,46 ± 0,86%** | **11,30 ± 10,52%** |
+| TPR / FPR (tie) | 4,18% / 2,79% | 6,36% / 1,23% | 9,78% / 1,81% |
+| Độ lệch chuẩn AUROC giữa seed | 0,106 | 0,003 (giảm ~35 lần) | 0,021 (giảm ~5 lần) |
 
 **Đánh giá:**
-1. **Bonferroni kiểm soát FPR:** Tại $\alpha = 0,05$, FPR thực đo là **3,64%** ($\le 5\%$); tại $\alpha=0,10$ là **5,78%** ($\le 10\%$). Đây là cấu hình dùng được cho claim kiểm soát FPR theo conformal, với giả định calibration và benign test exchangeable.
-2. **Fisher không kiểm soát FPR:** Fisher cho TPR 42,5–49,3% nhưng FPR 13,6–23,0%, vượt xa $\alpha$. Nguyên nhân: Fisher giả định 4 p-value độc lập, trong khi 4 detector tương quan mạnh; kết quả này chỉ nên đọc như exploratory.
-3. **Calibration floor:** Với 400 calibration flow (20%), Bonferroni tại $\alpha=0,05$ không thể alert vì $4/401=0,009975 > 0,05/7$. Tăng calibration lên 800 flow (40%) đưa sàn xuống $4/801=0,004994$, mở được operating point $\alpha=0,05$; $\alpha=0,01$ vẫn không thể alert.
-4. **Early-exit:** Bonferroni $\alpha=0,05$ phát hiện sớm 7,70% attack, APD 7,75 gói (giảm 3,1% so với 8); $\alpha=0,10$ phát hiện sớm 13,22%, APD 7,56 gói. Fisher giảm APD mạnh hơn (6,24 gói ở $\alpha=0,05$) nhưng không dùng được vì FPR cao.
-5. **Giới hạn quan trọng:** Ở operating point FPR=1%, Bonferroni không alert (TPR 0%) và Fisher chỉ đạt 2,77%, đều thấp hơn M1 (3,65%). Vì vậy P1 chưa vượt M1 ở vùng FPR thấp; đóng góp chính là một operating point có kiểm soát FPR và phân tích trade-off/calibration, không phải cải thiện tuyệt đối mọi metric.
+- Cả hai biến thể đều cải thiện AUROC khoảng +0,09, giảm FPR, và tăng TPR tại FPR thấp gấp khoảng 3 lần.
+- Mean aggregation còn **rẻ hơn**: không tính Q/K/V cho mỗi cặp cạnh, nên giảm phần `forward` vốn chiếm khoảng 11% độ trễ.
+- **Giới hạn:** AUROC ~0,69 vẫn còn xa mức triển khai được. Đề xuất A cải thiện đáng kể so với GTAE nhưng không đóng được khoảng cách tới con số của bài báo.
+
+### 7.3 Đề xuất B (tầng quyết định): P1, Calibrated Conformal Fusion & Sequential Early-Exit
+
+**7.3.1 Conformal p-value và hợp nhất**
+1. Chuyển điểm $s_m(x)$ của detector $m$ thành conformal p-value trên tập hiệu chuẩn benign $\mathcal{C}$:
+   $$\pi_m(x) = \frac{1 + \sum_{c \in \mathcal{C}} \mathbb{I}(s_m(c) \ge s_m(x))}{1 + |\mathcal{C}|}$$
+2. Hợp nhất M = 4 detector:
+   - **Bonferroni:** $\pi_{\text{fused}} = \min(1, M \cdot \min_m \pi_m)$. FPR ≤ α khi calibration và benign test exchangeable, **không** cần giả định các detector độc lập.
+   - **Fisher:** $T = -2\sum_m \ln \pi_m \sim \chi^2(2M)$. Chỉ đúng khi các p-value độc lập, nên chỉ dùng để thăm dò (exploratory).
+
+**7.3.2 Early-exit tuần tự**
+- Tại mỗi p = 2, 3, …, 8 dùng ngân sách $\alpha_p = \alpha / 7$ (Bonferroni qua 7 bước, nên tổng FPR ≤ α).
+- Nếu $\pi_{\text{fused},p}(x) \le \alpha_p$: báo động ngay, dừng thu thập gói, ghi `p_decision = p`.
+- Đến p = 8 mà chưa báo động thì kết luận benign.
+- Dùng 800 flow calibration (40% `train2`). Với 400 flow, p-value nhỏ nhất là $4/401 > 0{,}05/7$, nên Bonferroni ở α = 0,05 **không bao giờ** báo động được.
+
+**7.3.3 Kết quả (T_fixed, mean ± std 3 seed; [`P1.md`](P1.md))**
+
+| α | Fusion | TPR | FPR thực đo | Số gói TB đến quyết định (attack) | Tỉ lệ dừng sớm (attack) | AUROC |
+|---|---|---:|---:|---:|---:|---:|
+| 0,05 | **Bonferroni** | **8,95 ± 3,72%** | **3,64 ± 1,00%** (≤ 5%) | 7,75 | 7,70% | 0,662 ± 0,021 |
+| 0,10 | **Bonferroni** | **14,11 ± 2,11%** | **5,78 ± 1,35%** (≤ 10%) | 7,56 | 13,22% | 0,662 ± 0,021 |
+| 0,01 | Bonferroni | 0% | 0% | 8,00 | 0% | 0,662 |
+| 0,05 | Fisher (exploratory) | 47,53 ± 4,23% | 18,86 ± 4,81% (> α) | 6,24 | 46,98% | 0,639 |
+
+**Đánh giá trung thực:**
+1. **Đạt:** Bonferroni giữ FPR thực đo ≤ α ở cả α = 0,05 và α = 0,10, trên benign của **ngày khác** với calibration. Đây là thứ phiếu cứng của bài báo không làm được: người vận hành chọn trước mức báo động giả chấp nhận được.
+2. **Hạn chế về lý thuyết:** calibration (Monday) và benign test (Tue–Fri) không exchangeable, nên "FPR ≤ α" ở đây là **quan sát thực nghiệm**, không còn là bảo đảm lý thuyết.
+3. **Hạn chế về hiệu quả:** AUROC chỉ tăng từ 0,594 lên 0,662; TPR@FPR=1% của Bonferroni là 0%, thấp hơn M1 (3,65%). Phát hiện sớm có tác dụng nhỏ (số gói trung bình 7,56–7,75 so với 8).
+4. **Fisher** cho TPR cao nhưng FPR vượt α do 4 detector tương quan. Không dùng để khẳng định kiểm soát FPR.
+5. **Chi phí:** cần chạy 7 mô hình (mỗi p một mô hình); early-exit không giảm chi phí dựng đồ thị (§4.5).
+
+### 7.4 Kết hợp A + B và các bước tiếp theo
+Đề xuất B chỉ thay tầng quyết định nên bị giới hạn bởi chất lượng embedding (AUROC ~0,6). Kết hợp với Đề xuất A là bước hợp lý tiếp theo. Script đã hỗ trợ sẵn checkpoint E-GraphSAGE (`src/embed.load_model` đọc `arch_name`). P1 cũng đã ghi thêm TPR tại FPR 3% và 5%, để so với M1 **ở cùng FPR** (M1 có FPR ≈ 2,8%):
+
+```bash
+# P1 trên encoder B2 (đã có checkpoint p = 2, 4, 8)
+PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only \
+  --models experiments/T_egsage --p1-ps 2 4 8 --results results/P1_egsage
+# Đối chứng: P1 trên GTAE với cùng p = 2, 4, 8
+PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only \
+  --models experiments/T --p1-ps 2 4 8 --results results/P1_p248
+```
+
+Các hướng khác đã cân nhắc (`docs/GTAE-IDS_Research_docs.md` §6), xếp theo mức độ nhắm vào điểm nghẽn biểu diễn:
+- **P4 – nút = IP và đặc trưng nút nhẹ** (theo Anomal-E [8], Kitsune [11]): giảm phân mảnh đồ thị do port tạm thời.
+- **P5 – mục tiêu masked reconstruction** (GraphMAE [14]): buộc mô hình dùng ngữ cảnh thay vì sao chép đặc trưng cạnh.
+- **Online conformal / calibration theo cửa sổ trượt:** khôi phục giả định exchangeable khi phân phối trôi theo thời gian.
 
 ---
 
-## CHƯƠNG 7: KẾT LUẬN VÀ ĐÓNG GÓP HỌC THUẬT
+## CHƯƠNG 8: KẾT LUẬN
 
-1. **Tính trung thực khoa học:** Đồ án không che giấu kết quả âm khi tái hiện, mà đi sâu tìm hiểu bản chất và cung cấp bằng chứng mổ xẻ mã nguồn thuyết phục, giải trình tường tận lý do bài báo IEEE TIFS 2025 công bố con số 99% không tưởng.
-2. **Kỹ thuật công nghệ vững chắc:** Xây dựng hệ thống pipeline hoàn chỉnh, xử lý 51 GB pcap với 126 bài kiểm thử tự động, kiểm toán 428 tiêu chí không rò rỉ dữ liệu.
-3. **Đóng góp giải pháp thực tiễn (P1):** Đề xuất và đánh giá trung thực Early-Exit kết hợp Conformal Prediction. Bonferroni với 800 calibration flow kiểm soát FPR (3,43% @ α=0,05; 6,18% @ α=0,10) và tăng TPR so với M1 ở vùng FPR 3–6%, nhưng chưa vượt M1 tại FPR=1%; Fisher có TPR cao hơn nhưng FPR 17,7–22,3% nên chỉ là exploratory. Đóng góp là phân tích trade-off FPR/TPR/APD và giới hạn calibration, không phải một cải tiến thắng mọi metric.
+1. **Tìm hiểu bài báo:** nhóm phân tích đầy đủ phương pháp, cài đặt đúng Table III/V và Fig. 3/4, và liệt kê những điểm bài báo không mô tả nhưng ảnh hưởng tới khả năng tái lập (§2.5).
+2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 132 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% @ 6,56% **không tái lập được**, kể cả trong thiết lập giống bài báo nhất (`P_paper`: 3,25%). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
+3. **Đối chiếu và so sánh:**
+   - Nhóm kiểm chứng được các mâu thuẫn giữa bài báo, code và CSV của tác giả (luật OR, FPR không khớp, test theo từng lớp, notebook không chạy được).
+   - Baseline cùng protocol cho thấy attention, LapPE và ngữ cảnh đồ thị đều không phải nguồn tín hiệu.
+   - Claim "real-time" không đúng ở mức triển khai.
+4. **Đề xuất:**
+   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09, ổn định hơn 5–35 lần, TPR@FPR=1% gấp khoảng 3 lần.
+   - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít.
+   - Kết hợp A + B là hướng tiếp theo, đã có sẵn lệnh chạy.
+
+**Hạn chế của đồ án:**
+- Chỉ có 3 seed.
+- Số của các bài liên quan khác (trừ B2) lấy từ bài neo, chưa đọc bài gốc.
+- Chưa dựng lại thiết lập "mỗi lớp một đồ thị" (F3) trên dữ liệu của nhóm để định lượng tác động.
+- Chưa định lượng lỗi trượt nhãn (F7).

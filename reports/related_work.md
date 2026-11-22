@@ -1,6 +1,6 @@
 # So sánh với các bài báo liên quan — bảng có số và mức độ so sánh được
 
-**Cập nhật:** 2026-11-16 (sau lần retrain từ đầu + đo lại toàn bộ).
+**Cập nhật:** 2026-11-22 (sửa lập luận về TPR ở §2.2/§2.4, đồng bộ §3 với kết quả 2018/ACI, thêm độ lệch chuẩn theo seed).
 **Bài neo:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026–4041, 2025 → **[1]**.
 **Nguồn số liệu:** cột `nguồn` của mỗi bảng ghi rõ một trong ba loại:
 
@@ -16,7 +16,7 @@ Không có số nào trong tài liệu này được suy ra hay làm tròn từ 
 
 ## 1. So sánh *cùng protocol* — nhóm tự cài và tự đo
 
-Đây là phần duy nhất so sánh được trực tiếp: cùng dữ liệu (CIC-IDS2017, protocol `T` temporal), cùng 25-byte encoding, cùng 4 detector PyOD, cùng cách chia calibration (`train2`, 20%), cùng p. Chạy lại:
+Đây là phần duy nhất so sánh được trực tiếp: cùng dữ liệu (CIC-IDS2017, protocol `T` temporal), cùng 25-byte encoding, cùng 4 detector PyOD, cùng cách chia calibration (`train2`, 20% cho ngưỡng TPR@FPR=1%; P1 dùng 40%), cùng p. Mean ± std theo seed của mọi dòng: [`seed_stats.md`](seed_stats.md) — ví dụ AUROC M1 0,594 **± 0,106**, B2 0,689 **± 0,021**, A2 0,682 **± 0,003**, nên kết luận B2/A2 > M1 vượt phương sai seed, còn chênh lệch TPR ở ngưỡng riêng thì không. Chạy lại:
 
 ```bash
 python -m src.eval --models experiments/T --graphs data/graphs/T --out results --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --device cpu
@@ -108,7 +108,9 @@ Không lớp nào đạt 1/3 con số paper. PortScan là lớp "dễ" nhất c�
 | nPrint [5] / [P] | không có số TPR trong nguồn đã đọc | — | Chỉ so định tính (căn chỉnh theo trường) |
 
 **Điều kiện khác nhau ở đâu** (phải nói rõ khi trình bày, nếu không là so khập khiễng):
-paper [1] và các baseline của nó dùng **chia cân bằng benign/attack** (5.000 benign + 5.000 attack theo lớp) và **có nhãn tấn công** trong Table XI; nhóm dùng **temporal, one-class, benign-only training**, test là toàn bộ lưu lượng Thứ Ba–Thứ Sáu (30.907 edge, 84% attack). Balanced split làm bài toán dễ hơn hẳn: cùng một mô hình, cùng seed, đổi sang test mất cân bằng là TPR rơi từ ~0,99 xuống mức vài phần trăm.
+paper [1] và các baseline của nó dùng **chia cân bằng benign/attack** (5.000 benign + 5.000 attack theo lớp) và **có nhãn tấn công** trong Table XI; nhóm dùng **temporal, one-class, benign-only training**, test là toàn bộ lưu lượng Thứ Ba–Thứ Sáu (30.907 edge, 84% attack).
+
+**Lưu ý khi diễn giải khoảng cách TPR:** với ngưỡng cố định (đặt trên benign `train2`), TPR chỉ tính trên các mẫu tấn công nên **không phụ thuộc tỉ lệ benign/attack** — tỉ lệ này chỉ ảnh hưởng precision. Vì vậy "cân bằng vs mất cân bằng" **không** giải thích được TPR rơi từ ~0,99 xuống vài phần trăm. Các khác biệt thật sự là: (i) có nhãn hay không (Table XI là supervised), (ii) benign test cùng ngày hay khác ngày với train, và (iii) với mô hình đồ thị, **thành phần đồ thị test** — đồ thị chỉ gồm một lớp tấn công (như code tác giả, `docs/REPRO_AUDIT.md` F3) có topo khác hẳn đồ thị trộn benign, nên embedding của cùng một luồng tấn công thay đổi theo đồ thị nó nằm trong.
 
 ---
 
@@ -122,9 +124,11 @@ trên cùng hai bộ nhưng có benign để tính FPR — cùng 25-byte, cùng 
 | CIC-IDS2018 (1 ngày) | 5.000 benign (5 host) + 5.000 Hulk | 98,74% | 5,99% | 1,52% | 0,764 | 5,94% |
 | ACI-IoT-2023 | 5.000 benign **ngày khác** + 15.000 tấn công (3 lớp) | 98,21% | 1,69% | 1,11% | 0,536 | 1,95% |
 
-Hai con số paper là "TPR trên tập toàn tấn công"; hai con số của nhóm là "TPR khi phải
-tách khỏi benign thật". Khoảng cách 98,74 → 5,99 (2018) và 98,21 → 1,69 (ACI) là **giá của
-việc đo FPR**, không phải lỗi cài đặt: cùng pipeline cho AUROC 0,764 (2018) và 0,536 (ACI).
+Hai con số paper là "TPR trên đồ thị test chỉ gồm tấn công"; hai con số của nhóm là TPR khi
+đồ thị test trộn benign thật và ngưỡng được đặt trên benign train. Bản thân việc đo thêm FPR
+**không** làm TPR thay đổi (TPR chỉ tính trên mẫu tấn công). Khoảng cách 98,74 → 5,99 (2018)
+và 98,21 → 1,69 (ACI) đến từ chất lượng embedding (AUROC 0,764 và 0,536) và từ thành phần đồ
+thị test (chỉ-tấn-công vs trộn benign, xem §2.2), không phải lỗi cài đặt.
 
 ## 3. Bốn tuyên bố của paper, đối chiếu bằng số đo của nhóm
 
@@ -135,9 +139,9 @@ việc đo FPR**, không phải lỗi cài đặt: cùng pipeline cho AUROC 0,76
 | **Ngữ cảnh đồ thị giúp phát hiện** | B0 (không đồ thị) AUROC 0,698 / HBOS 0,810 > M1 0,594 | **Không xác nhận** trong protocol này. Đồ thị chưa chứng minh được lợi ích xếp hạng |
 | **"Real-time": 1,28 µs/gói** | end-to-end thật trên replay Thứ Sáu: **15.272 µs/gói** (forward-only 1.663 µs/gói); 8,2 flow/s vs 12,1 flow/s lưu lượng đến | **Không xác nhận ở mức triển khai.** Con số 1,28 µs là model-only trên GPU và *không* tính trích đặc trưng + chờ luồng — đúng phần chiếm phần lớn thời gian |
 
-Hai tuyên bố nữa của [1] mà nhóm **không** kiểm chứng được (và nên nói rõ là chưa):
-- **Zero-day** trên CIC-IDS2018 + ACI-IoT-2023 (Table VIII/IX của [1]): nhóm chưa có dữ liệu 2018 (xem `docs/DECISIONS.md` §1), ACI mới có CSV 108 MB, chưa parse.
-- **Không rò rỉ giữa các ngày**: [1] không nêu; nhóm đo được rằng split của họ trùng ngày (same-day) — xem `docs/REPRO_AUDIT.md`, và đó là lý do `T` là protocol chính.
+Hai tuyên bố nữa của [1], đối chiếu bằng số đo:
+- **Tổng quát hoá sang môi trường mới** (Table VIII/IX của [1], TPR > 98%): nhóm đo trên một ngày CIC-IDS2018 và ACI-IoT-2023 có benign trong test (§2.4): TPR 5,99% / 1,69%, AUROC 0,764 / 0,536 → **không xác nhận**. Giới hạn: 2018 mới có 1 ngày (Hulk), ACI 3 lớp tấn công (`reports/cross_dataset.md`).
+- **Thiết lập benign train/test**: [1] chỉ nói dữ liệu được coi là *"snapshot at an arbitrary timestamp t"* (§IV-B), không nêu ngày. Code của tác giả dùng Friday 70/30 cho cả train và benign test (`docs/REPRO_AUDIT.md` F4). Đây là lý do nhóm chọn protocol `T` (train Monday, test Tue–Fri) làm chính — một lựa chọn của nhóm để đo dưới dịch chuyển thời gian, không phải thiết lập paper công bố.
 
 ---
 
@@ -147,7 +151,7 @@ Hai tuyên bố nữa của [1] mà nhóm **không** kiểm chứng được (v�
 
 | Điểm | Bằng chứng |
 |---|---|
-| Kiến trúc cạnh (edge-level) + line graph là cài đặt được, không cần PyG | `src/model_gtae.py`, `src/line_graph.py`; 110 test pass |
+| Kiến trúc cạnh (edge-level) + line graph là cài đặt được, không cần PyG | `src/model_gtae.py`, `src/line_graph.py`; 132 test pass |
 | Không cần nhãn tấn công để học biểu diễn | train chỉ dùng Monday benign; eval trên Thứ Ba–Thứ Sáu |
 | Pipeline 25 byte/gói chạy được ở p = 2..8 | 21 checkpoint, `results/M1_summary.csv` |
 | Phát hiện sớm *có* ý nghĩa về chi phí | P1: APD 7,56 gói, 13,22% attack quyết định trước gói 8 |
