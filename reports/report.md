@@ -8,6 +8,8 @@
 **Bài báo nghiên cứu cơ sở (paper neo):**
 > J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, *"GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection,"* **IEEE Transactions on Information Forensics and Security (TIFS)**, vol. 20, pp. 4026–4041, 2025. DOI: `10.1109/TIFS.2025.3557741`.
 
+**Mã nguồn:** [github.com/dwuyn/NT204.R11.ANTN_GTAE-IDS](https://github.com/dwuyn/NT204.R11.ANTN_GTAE-IDS)
+
 **Cấu trúc báo cáo theo yêu cầu đề tài:**
 
 | Yêu cầu | Chương |
