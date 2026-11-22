@@ -1,6 +1,4 @@
-# NT204.R11.ANTN — Tái hiện, Phản biện và Cải tiến GTAE-IDS (Nhóm B)
-
-> Số liệu trong README được đồng bộ với các CSV đo trong `results/` (retrain 2026-11-16, đo bổ sung tới 2026-11-21). Mean ± std: [`reports/seed_stats.md`](reports/seed_stats.md) (sinh bởi `scripts/make_seed_stats.py`); M1 dùng 7 seed cho đường cong p, baseline/P1 dùng 3 seed. Báo cáo đầy đủ: [`reports/report.md`](reports/report.md).
+# NT204.R11.ANTN — Tái hiện, Phản biện và Cải tiến GTAE-IDS
 
 Đồ án môn học **Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập** (NT204.R11.ANTN) — Khoa Mạng máy tính & Truyền thông, Trường Đại học Công nghệ Thông tin, ĐHQG-HCM.
 

@@ -2,13 +2,9 @@
 ## HỆ THỐNG PHÁT HIỆN XÂM NHẬP MẠNG THỜI GIAN THỰC DỰA TRÊN ĐỒ THỊ BIẾN ĐỔI TỰ MÃ HÓA (GTAE-IDS)
 ### TÁI HIỆN ĐỘC LẬP, ĐỐI CHIẾU MÃ NGUỒN GỐC, SO SÁNH VỚI CÁC NGHIÊN CỨU LIÊN QUAN VÀ ĐỀ XUẤT CẢI TIẾN
 
-> **Nguồn số liệu:** mọi con số trong báo cáo được lấy từ các CSV đo trong `results/` (retrain 2026-11-16, đo bổ sung tới 2026-11-21). Bảng phương sai theo seed được sinh tự động bởi `scripts/make_seed_stats.py` → [`seed_stats.md`](seed_stats.md). Nếu có chỗ lệch, CSV là nguồn chuẩn.
-
 ---
 
 **Môn học:** Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập (NT204.R11.ANTN)
-**Nhóm thực hiện:** Nhóm B
-**Thời gian hoàn thành:** 22/11/2026
 **Bài báo nghiên cứu cơ sở (paper neo):**
 > J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, *"GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection,"* **IEEE Transactions on Information Forensics and Security (TIFS)**, vol. 20, pp. 4026–4041, 2025. DOI: `10.1109/TIFS.2025.3557741`.
 
@@ -218,8 +214,6 @@ Kế hoạch (`docs/GTAE-IDS_Research_docs.md` §0) đặt bốn tiêu chí thà
 ## CHƯƠNG 5: ĐỐI CHIẾU BÀI BÁO VỚI MÃ NGUỒN CÔNG KHAI CỦA TÁC GIẢ
 
 Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kết quả) và `jalalgh7/robust-and-real-time-NIDS` (trích xuất gói tin; `graph_generation/*.ipynb` của GTAE đọc trực tiếp file `.pkl` do repo này sinh ra). Chi tiết, kèm số cell và trích đoạn code: [`docs/REPRO_AUDIT.md`](../docs/REPRO_AUDIT.md) §5.
-
-**Nguyên tắc:** nhóm chỉ khẳng định những **mâu thuẫn kiểm tra được** giữa bài báo, code và CSV; không suy diễn về ý định của tác giả.
 
 | # | Phát hiện | Mức độ kiểm chứng |
 |---|---|---|
