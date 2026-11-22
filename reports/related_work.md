@@ -16,7 +16,7 @@ Không có số nào trong tài liệu này được suy ra hay làm tròn từ 
 
 ## 1. So sánh *cùng protocol* — nhóm tự cài và tự đo
 
-Đây là phần duy nhất so sánh được trực tiếp: cùng dữ liệu (CIC-IDS2017, protocol `T` temporal), cùng 25-byte encoding, cùng 4 detector PyOD, cùng cách chia calibration (`train2`, 20% cho ngưỡng TPR@FPR=1%; P1 dùng 40%), cùng p. Mean ± std theo seed của mọi dòng: [`seed_stats.md`](seed_stats.md) — ví dụ AUROC M1 0,594 **± 0,106**, B2 0,689 **± 0,021**, A2 0,682 **± 0,003**, nên kết luận B2/A2 > M1 vượt phương sai seed, còn chênh lệch TPR ở ngưỡng riêng thì không. Chạy lại:
+Đây là phần duy nhất so sánh được trực tiếp: cùng dữ liệu (CIC-IDS2017, protocol `T` temporal), cùng 25-byte encoding, cùng 4 detector PyOD, cùng cách chia calibration (`train2`, 20% cho ngưỡng TPR@FPR=1%; P1 dùng 40%), cùng p. Mean ± std theo seed của mọi dòng: [`seed_stats.md`](seed_stats.md) — ví dụ AUROC M1 0,594 **± 0,106**, B2 0,689 **± 0,021**, A2 0,682 **± 0,003**, nên B2/A2 **ổn định hơn hẳn** (sd 0,021 và 0,003) và không bao giờ dưới 0,66, trong khi M1 trải 0,495–0,705; chênh lệch trung bình B2−M1 ≈ 0,096 nhưng sd của chênh lệch ghép cặp là 0,093 (n=3), nên **chưa thể nói "vượt phương sai seed"** — chỉ nói được B2/A2 ổn định hơn và không thua ở worst case; chênh lệch TPR ở ngưỡng riêng càng không đủ kết luận. Chạy lại:
 
 ```bash
 python -m src.eval --models experiments/T --graphs data/graphs/T --out results --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --device cpu

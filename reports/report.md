@@ -43,7 +43,7 @@
 - **"Real-time" không đạt ở mức triển khai**: 8,2 flow/s, trong khi lưu lượng đến là 12,1 flow/s.
 
 **Đề xuất cải tiến** (Chương 7) gồm hai tầng:
-- **(A) Tầng biểu diễn:** thay attention bằng mean aggregation và bỏ LapPE. Đã đo: AUROC tăng từ 0,594 lên 0,68–0,69, độ lệch chuẩn giữa các seed giảm 5–35 lần, TPR@FPR=1% tăng từ 3,65% lên 11–12%.
+- **(A) Tầng biểu diễn:** thay attention bằng mean aggregation và bỏ LapPE. Đã đo: AUROC tăng từ 0,594 lên 0,68–0,69, độ lệch chuẩn giữa các seed giảm 5–38 lần, TPR@FPR=1% tăng từ 3,65% lên 11–12%.
 - **(B) Tầng quyết định (P1):** conformal p-value kết hợp early-exit tuần tự theo p. Bonferroni giữ được FPR thực đo ≤ α (3,64% @ α=0,05; 5,78% @ α=0,10), nhưng TPR tăng ít và tại FPR=1% không vượt M1.
 
 Nhóm trình bày cả những tiêu chí **không đạt**: đường cong TPR theo p không đơn điệu, GTAE không vượt baseline không dùng đồ thị.
@@ -369,7 +369,7 @@ Từ Chương 4–6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác
 5. **Chi phí:** cần chạy 7 mô hình (mỗi p một mô hình); early-exit không giảm chi phí dựng đồ thị (§4.5).
 
 ### 7.4 Kết hợp A + B và các bước tiếp theo
-Đề xuất B chỉ thay tầng quyết định nên bị giới hạn bởi chất lượng embedding (AUROC ~0,6). Kết hợp với Đề xuất A là bước hợp lý tiếp theo. Script đã hỗ trợ sẵn checkpoint E-GraphSAGE (`src/embed.load_model` đọc `arch_name`). P1 cũng đã ghi thêm TPR tại FPR 3% và 5%, để so với M1 **ở cùng FPR** (M1 có FPR ≈ 2,8%):
+Đề xuất B chỉ thay tầng quyết định nên bị giới hạn bởi chất lượng embedding (AUROC ~0,6). Kết hợp với Đề xuất A là bước hợp lý tiếp theo. Script đã hỗ trợ sẵn checkpoint E-GraphSAGE (`src/embed.load_model` đọc `arch_name`). P1 cũng đã ghi thêm TPR tại FPR 3% và 5% để so với M1 **ở cùng FPR** (kết quả trong `results/P1_summary.csv`: Bonferroni 1,82% @ 3% và 10,17% @ 5%; M1 đạt 4,18% ở FPR riêng 2,79% và 3,65% ở FPR=1% — nên ngay cả khi nới FPR lên 3–5%, P1 vẫn chưa vượt M1 ở vùng FPR thấp):
 
 ```bash
 # P1 trên encoder B2 (đã có checkpoint p = 2, 4, 8)
@@ -396,7 +396,7 @@ Các hướng khác đã cân nhắc (`docs/GTAE-IDS_Research_docs.md` §6), x�
    - Baseline cùng protocol cho thấy attention, LapPE và ngữ cảnh đồ thị đều không phải nguồn tín hiệu.
    - Claim "real-time" không đúng ở mức triển khai.
 4. **Đề xuất:**
-   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09, ổn định hơn 5–35 lần, TPR@FPR=1% gấp khoảng 3 lần.
+   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09, ổn định hơn 5–38 lần, TPR@FPR=1% gấp khoảng 3 lần.
    - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít.
    - Kết hợp A + B là hướng tiếp theo, đã có sẵn lệnh chạy.
 

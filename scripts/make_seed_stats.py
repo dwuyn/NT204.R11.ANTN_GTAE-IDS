@@ -177,10 +177,15 @@ def _write_csv(path: Path, records: list[dict[str, object]]) -> None:
         for key in rec:
             if key not in fields:
                 fields.append(key)
+    def stable(value: object) -> object:
+        # float sums differ in the last bit between machines/Python builds; round so the
+        # committed artifact is byte-stable without losing any reported precision.
+        return round(value, 6) if isinstance(value, float) else value
+
     with path.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
-        writer.writerows(records)
+        writer.writerows({k: stable(v) for k, v in rec.items()} for rec in records)
 
 
 def main(argv: list[str] | None = None) -> int:
