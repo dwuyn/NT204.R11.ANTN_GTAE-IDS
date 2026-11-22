@@ -25,7 +25,7 @@
 
 ## TÓM TẮT
 
-Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình (p = 2..8 × 3 seed), viết 132 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
+Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình canonical (p = 2..8 × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p) cho kiểm tra độ bất định, viết 132 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
 
 **Kết quả tái hiện:** con số công bố **TPR 99,04% @ FPR 6,56%** không tái lập được.
 - Protocol `T` (train benign Monday, test Tue–Fri) đạt TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106** (3 seed).
@@ -132,7 +132,7 @@ Các protocol đánh giá:
 - **`R`:** chia ngẫu nhiên theo flow, gần với cách hiểu "snapshot" của bài báo.
 - **`P_paper`:** dựng theo dòng CSV CICFlowMeter, đúng số lượng từng lớp như Table VII, đúng grid contamination, đúng luật OR của code (Chương 4.3).
 
-**Quy trình huấn luyện:** 21 mô hình (7 giá trị p × 3 seed). Lần đầu chạy trên Kaggle T4; bản cuối (dùng cho mọi số liệu trong báo cáo) được huấn luyện lại từ đầu trên CPU ngày 2026-11-16.
+**Quy trình huấn luyện:** 21 mô hình canonical (7 giá trị p × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p, `experiments/T_probe`) để đo độ bất định; lần đầu chạy trên Kaggle T4, bản cuối được huấn luyện lại từ đầu trên CPU ngày 2026-11-16.
 
 ### 3.2 Kiểm thử và chống rò rỉ dữ liệu
 - **132 test `pytest` pass**: không có IP/port trong đặc trưng, các split rời nhau, train chỉ có benign, test cho conformal/early-exit, test cho script thống kê seed.
@@ -152,14 +152,15 @@ Các protocol đánh giá:
 
 **Phương sai giữa các seed rất lớn:** AUROC của 3 seed là 0,705 / 0,581 / 0,495; seed kém nhất gần như đoán ngẫu nhiên. Vì vậy với 3 seed, mọi chênh lệch nhỏ hơn khoảng 1 std **không** đủ để kết luận. Tuy nhiên, khoảng cách tới con số 99% của bài báo lớn hơn hàng chục lần độ lệch chuẩn, nên kết luận "không tái lập được" vẫn đứng vững.
 
-### 4.2 Đường cong theo p (ensemble tie, mean ± std)
+### 4.2 Đường cong theo p (ensemble tie; 7 seed mỗi p)
 
 | p | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| TPR (%) | 3,30 ± 1,70 | 4,18 ± 1,93 | 8,56 ± 2,64 | 6,31 ± 5,40 | 14,93 ± 10,87 | 6,90 ± 11,87 | 4,18 ± 4,30 |
-| AUROC | 0,505 | 0,504 | 0,578 | 0,678 | **0,835** | 0,711 | 0,594 |
+| TPR (%) | 2,99 ± 1,66 | 7,31 ± 4,35 | 9,29 ± 5,83 | 8,82 ± 8,74 | 9,21 ± 8,93 | 4,43 ± 7,46 | 7,63 ± 6,56 |
+| AUROC | 0,499 ± 0,022 | 0,494 ± 0,024 | 0,597 ± 0,044 | 0,680 ± 0,020 | **0,774 ± 0,068** | 0,709 ± 0,157 | 0,663 ± 0,092 |
+| AUROC min–max | 0,470–0,529 | 0,468–0,525 | 0,542–0,681 | 0,650–0,715 | 0,698–0,886 | 0,460–0,843 | 0,495–0,750 |
 
-Bài báo cho TPR tăng đơn điệu theo p (84,47% → 99,04%). Ở tái hiện, AUROC cao nhất ở **p = 6** rồi giảm, kèm phương sai tăng mạnh ở p = 7–8.
+Bảy seed mỗi p (3 canonical + 4 bổ sung, `results/probe_extra_seeds/`). So với 3 seed, p=8 tăng từ 0,594 lên **0,663 ± 0,092** — cú rơi ở p=8 một phần là nhiễu seed. Nhưng đường cong vẫn **không đơn điệu**: AUROC đỉnh ở p=6 rồi giảm ở p=7–8, TPR cũng vậy. Tiêu chí "TPR tăng theo p" vì thế **không đạt ngay cả với 7 seed** — đây là kết quả đo, không phải thiếu mẫu. Khoảng cách tới 99,04% của bài báo vẫn lớn hơn nhiều lần độ lệch chuẩn.
 
 ### 4.3 Dựng lại đúng thiết lập của bài báo (`P_paper`)
 Để loại trừ khả năng "kết quả âm chỉ là do cách dựng tập test của nhóm", nhóm dựng protocol `P_paper`:
@@ -224,11 +225,11 @@ Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kế
 |---|---|---|
 | F1 | Cột Ensemble của **Table VII trùng khớp từng chữ số** với output của `anomalies_ensemble = (votes >= 1)`, tức luật **OR** (cell 60 `GTAE_8pkt.ipynb`). Bài báo (tr. 4033) mô tả *majority voting* | Đã kiểm chứng |
 | F2 | Table VI ghi FPR Ensemble **6,56%** (OCSVM 4,03%). CSV công khai của tác giả ghi FPR benign của Ensemble là **13,12%** (OCSVM 8,06%). Artefact công khai không tái tạo được điểm vận hành đã công bố | Đã kiểm chứng |
-| F3 | Mỗi lớp tấn công được dựng thành **một đồ thị test riêng** (`create_graph_from_df` gọi cho từng lớp). Đồ thị chỉ có DoS (hub cực lớn) khác hẳn topo đồ thị benign, nên detector có thể dựa vào cấu trúc làm lối tắt | Đã kiểm chứng (cơ chế); tác động cần thí nghiệm riêng |
+| F3 | Mỗi lớp tấn công được dựng thành **một đồ thị test riêng** (`create_graph_from_df` gọi cho từng lớp). Đồ thị chỉ có DoS (hub cực lớn) khác hẳn topo đồ thị benign, nên detector có thể dựa vào cấu trúc làm lối tắt | Đã định lượng: dựng lại đúng kiểu paper trên `P_paper` p8, TPR trên đồ thị chỉ-attack **không cao hơn** đồ thị trộn (PortScan 0,00% vs 6,32%; mọi lớp ≤0,98%) ⇒ topo không phải lối tắt mô hình nhóm khai thác được |
 | F4 | Benign train và benign test cùng từ **Friday** (70/30). Bài báo **không** nêu ngày train; đây là điểm yếu phương pháp (không có dịch chuyển phân phối), không phải mâu thuẫn với nội dung bài báo | Đã kiểm chứng |
 | F5 | Detector chạy trên **output của decoder** (`autoencoder(...)` trả về bản tái tạo 400 chiều), không phải embedding ở bottleneck như bài báo mô tả (§IV-C) | Đã kiểm chứng |
 | F6 | Lớp `GraphAutoencoder` công bố không nối encoder vào decoder (`self.decoder(features)`), dùng `nn.GraphTransformerLayer` (không tồn tại trong PyTorch) và có `execution_count` lộn xộn. Kết luận: **notebook không phản ánh code đã sinh ra kết quả**. Nhóm **không** khẳng định mô hình thực tế là `Linear(400, 400)` | Đã kiểm chứng phần code |
-| F7 | Trong repo trích xuất gói tin, gói nền trong cửa sổ tấn công không được gán nhãn (thiếu `else`). Cột nhãn được gán theo vị trí rồi `dropna()`, nên nhãn bị **trượt hàng** | Cơ chế đã kiểm chứng; số luồng bị ảnh hưởng chưa định lượng; xếp là lỗi phụ |
+| F7 | Trong repo trích xuất gói tin, gói nền trong cửa sổ tấn công không được gán nhãn (thiếu `else`). Cột nhãn được gán theo vị trí rồi `dropna()`, nên nhãn bị **trượt hàng** | Đã định lượng trên Thứ Ba: 269.201/851.306 gói bị bỏ qua, **13,9%** gói sai nhãn, precision nhãn tấn công **11,8%**, recall **14,8%**, **14,4%** flow bị ảnh hưởng |
 
 **Kết luận:** F1 + F2 giải thích vì sao các con số công bố không tái tạo được từ artefact. F3 + F4 + F5 cho thấy thiết lập đánh giá của code dễ hơn nhiều so với tình huống triển khai thật. Phần còn lại của khoảng cách (Chương 4.3) cho thấy, ngay cả khi làm theo đúng thiết lập của bài báo, embedding GTAE vẫn không tách được benign khỏi tấn công.
 
@@ -401,7 +402,72 @@ Các hướng khác đã cân nhắc (`docs/GTAE-IDS_Research_docs.md` §6), x�
    - Kết hợp A + B là hướng tiếp theo, đã có sẵn lệnh chạy.
 
 **Hạn chế của đồ án:**
-- Chỉ có 3 seed.
-- Số của các bài liên quan khác (trừ B2) lấy từ bài neo, chưa đọc bài gốc.
-- Chưa dựng lại thiết lập "mỗi lớp một đồ thị" (F3) trên dữ liệu của nhóm để định lượng tác động.
-- Chưa định lượng lỗi trượt nhãn (F7).
+- **Seed:** 7 seed cho M1 ở mọi p (đường cong §4.2) nhưng 3 seed cho baseline/P1; và 7 seed vẫn chưa đủ để kết luận chênh lệch <1 sd — ví dụ B2−M1 = 0,096 với sd của chênh lệch ghép cặp là 0,093.
+- Đã tải và đối chiếu **3 PDF gốc** (E-GraphSAGE, Anomal-E, Pujol-Perich, trong `docs/related/`): Anomal-E khớp chính xác (86,28→94,51 macro-F1); dòng E-GraphSAGE của Table XI **không có trong bài gốc** (bài gốc dùng NF-UNSW-NB15/NF-ToN-IoT/NF-BoT-IoT, metric F1/FAR); Pujol khớp một phần (accuracy từng lớp, thiếu Heartbleed/Infiltration). PBCNN, SPIN-IDS, GraphDDoS, GraphIDS vẫn là nguồn thứ cấp (paywall/không tìm thấy PDF) — chi tiết `reports/related_work_verification.md`.
+- F3 và F7 **đã định lượng** (Chương 5; `results/per_class_graphs.csv`, `results/label_shift_f7.csv`), nên không còn là hạn chế mở; phần chưa làm là các biến thể robustness/online khác trong `docs/GTAE-IDS_Research_docs.md` §6.
+
+---
+
+## PHỤ LỤC A — TÁI LẬP KẾT QUẢ
+
+Mọi số trong báo cáo sinh từ `results/*.csv`; các lệnh dưới chạy từ gốc repo với `.venv/bin/python`.
+
+```bash
+# 1. Dữ liệu → đồ thị (CIC-IDS2017, protocol T/R/T_fixed)
+python -m src.parse_pcap --pcap data/raw/Wednesday-workingHours.pcap --out data/processed --day wednesday
+python -m src.label --flows data/processed/flows_wednesday.parquet --offset-minutes -180 \
+  --out data/processed/flows_wednesday_labeled.parquet
+python -m src.build_dataset --p 2 3 4 5 6 7 8 --out data/graphs
+
+# 2. Huấn luyện + đánh giá (21 model = 7 p × 3 seed; + 28 model seed 3..6 để đo bất định)
+python scripts/train_all.py --graphs data/graphs/T --out experiments/T --ps 2 3 4 5 6 7 8 --device cpu
+python -m src.eval --models experiments/T --graphs data/graphs/T --out results \
+  --ps 2 3 4 5 6 7 8 --seeds 0 1 2 --device cpu
+python scripts/train_all.py --graphs data/graphs/T --out experiments/T_probe \
+  --ps 2 3 4 5 6 7 8 --seeds 3 4 5 6 --patience 100 --device cpu
+python -m src.eval --models experiments/T_probe --graphs data/graphs/T \
+  --out results/probe_extra_seeds --ps 2 3 4 5 6 7 8 --seeds 3 4 5 6 --device cpu
+
+# 3. Baseline + P1 + ablation
+PYTHONPATH=. python scripts/eval_baselines_p1.py --calibration-fraction 0.4
+python scripts/eval_recon_ablation.py --graphs data/graphs/T --models experiments/T \
+  --ps 2 4 8 --seeds 0 1 2 --out results --device cpu
+python scripts/eval_hygiene.py --ps 8 --seeds 0 1 2 --device cpu
+python scripts/make_ablation_report.py && python scripts/make_p1_report.py
+
+# 4. Paper-parity (Table II/V/VI/VII) + p-curve
+python scripts/build_paper_graphs.py --out data/graphs/P_paper --ps 2 3 4 5 6 7 8 --seed 0
+python scripts/train_all.py --graphs data/graphs/P_paper --out experiments/P_paper --ps 8 --device cpu
+python scripts/eval_paper_parity.py --protocols P_paper T --ps 8 --seeds 0 1 2 \
+  --out results/paper_parity --device cpu --write-report --diagnostics
+python scripts/check_paper_counts.py --all-p
+
+# 5. Chuyển miền 2018 + ACI, độ trễ, seed variance, F3, F7
+python scripts/build_cross_dataset_graphs.py --processed data/processed/2018 --out data/graphs/2018
+python scripts/build_cross_dataset_graphs.py --processed data/processed/aci --out data/graphs/aci \
+  --train-tags aci_benign1 --test-benign-tags aci_benign2
+python scripts/eval_latency.py --mode stream --pcap data/raw/Friday-WorkingHours.pcap \
+  --day friday --graphs data/graphs/T --models experiments/T_noPE --p 8 --out results
+python scripts/make_seed_stats.py
+python scripts/eval_per_class_graphs.py --p 8 --seeds 0 1 2
+python scripts/eval_label_shift.py --day tuesday --offset-minutes -180
+python scripts/eval_wait_p.py --out results/wait_p.csv
+
+# 6. Kiểm chứng
+pytest -q                     # 126+ test
+python scripts/audit_artifacts.py   # 428/428
+```
+
+## PHỤ LỤC B — BẢNG SỐ LIỆU ↔ TỆP KẾT QUẢ
+
+| Bảng trong báo cáo | Tệp nguồn |
+|---|---|
+| §4.1 kết quả chính p=8 | `results/M1_summary.csv`, `results/noPE/`, `results/B0_summary.csv`, `results/B1_summary.csv`, `results/B2/M1_summary.csv`, `results/A3_recon.csv`, `results/A5_hygiene.csv` |
+| §4.2 đường cong p | `results/M1_summary.csv`; độ bất định seed: `results/seed_stats.csv` |
+| §4.3 P_paper (Table II/VI/VII) | `results/paper_parity/p*_selected.csv`, `p8_per_class.csv`, `p8_padding_diag.csv`, `results/P_paper_table2.csv` |
+| §4.4 chuyển miền | `results/2018/M1_summary.csv`, `results/aci/M1_summary.csv` |
+| §4.5 độ trễ | `results/latency.csv`, `results/latency_summary.json`, `results/early_exit_timing.csv` |
+| §5 F1–F7 | `docs/REPRO_AUDIT.md`; F3: `results/per_class_graphs.csv`; F7: `results/label_shift_f7.csv` |
+| Chương 6 related work | `reports/related_work.md`, `reports/related_work_verification.md` |
+| Chương 7 P1 | `results/P1_summary.csv`, `results/P1_meta.json`, `reports/P1.md` |
+| Chương 8 hạn chế | `results/seed_stats.csv`, `docs/DECISIONS.md` |

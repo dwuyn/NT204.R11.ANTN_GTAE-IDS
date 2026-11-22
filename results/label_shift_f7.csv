@@ -1,0 +1,17 @@
+metric,value
+day,tuesday
+packets_total,851306
+packets_skipped_by_bug,269201
+packets_retained_after_dropna,582105
+packets_dropped,269201
+packets_mislabelled,80848
+packet_mismatch_rate,0.138889
+true_attack_packets,41192
+bugged_attack_labels,51864
+attack_label_precision,0.117692
+attack_label_recall,0.148184
+false_attack_labels,45760
+lost_attack_labels,35088
+flows_touched,15893
+flows_total,110550
+touched_flow_rate,0.143763

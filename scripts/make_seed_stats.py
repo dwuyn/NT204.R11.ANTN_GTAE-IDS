@@ -23,6 +23,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 METRICS = ("tpr", "fpr", "auroc", "tpr_at_fpr", "fpr_at_threshold")
 
 # (label, csv path, rule column value, p filter). Rule column is "detector" or "rule".
+# Extra seed runs merged into the M1 p-curve (7 seeds instead of 3 once present).
+EXTRA_M1_SOURCES: tuple[str, ...] = ("results/probe_extra_seeds/M1_summary.csv",)
+
 SOURCES: tuple[tuple[str, str, str, int | None], ...] = (
     ("M1 GTAE (tie)", "results/M1_summary.csv", "tie", None),
     ("M1 GTAE (INNE)", "results/M1_summary.csv", "INNE", 8),
@@ -127,7 +130,7 @@ def _auc(rec: dict[str, object]) -> str:
 
 def render(records: list[dict[str, object]], m1_curve: list[dict[str, object]]) -> str:
     lines = [
-        "# Phương sai theo seed (mean ± std, 3 seed)",
+        "# Phương sai theo seed (mean ± std, n ghi trong bảng)",
         "",
         "> Sinh tự động bởi `scripts/make_seed_stats.py` từ các CSV đo trong `results/`. "
         "Không sửa tay. std là độ lệch chuẩn mẫu (ddof=1); ngoặc vuông là min–max AUROC.",
@@ -144,7 +147,7 @@ def render(records: list[dict[str, object]], m1_curve: list[dict[str, object]]) 
         )
     lines += [
         "",
-        "## 2. Đường cong theo p của M1 (ensemble tie)",
+        "## 2. Đường cong theo p của M1 (ensemble tie; n = 7 khi có `probe_extra_seeds`)",
         "",
         "| p | TPR (%) | FPR (%) | AUROC |",
         "|---:|---:|---:|---:|",
@@ -208,6 +211,16 @@ def main(argv: list[str] | None = None) -> int:
         elif p is None:
             summary = [r for r in summary if r["p"] == 8]
         records.extend(summary)
+
+    extra_paths = [root / rel for rel in EXTRA_M1_SOURCES if (root / rel).exists()]
+    if extra_paths:
+        merged_rows = load_source(root / "results/M1_summary.csv", "tie", None)
+        for extra in extra_paths:
+            merged_rows += load_source(extra, "tie", None)
+        m1_curve_all = summarize(merged_rows, "M1 GTAE (tie, all seeds)")
+        records.extend([r for r in m1_curve_all if r["p"] == 8])
+        m1_curve = m1_curve_all
+        print(f"merged {len(extra_paths)} extra-seed CSV(s) into the M1 curve", flush=True)
 
     p1_path = root / "results/P1_summary.csv"
     if p1_path.exists():

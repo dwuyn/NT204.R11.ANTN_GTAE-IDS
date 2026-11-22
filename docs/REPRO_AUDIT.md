@@ -106,11 +106,11 @@ Nguồn kiểm tra:
 |---|---|---|---|
 | F1 | Table VII khớp **từng số** với luật OR (`votes >= 1`), trong khi bài báo mô tả *majority voting* | **Đã kiểm chứng** | Trực tiếp: OR luôn cho TPR ≥ mọi detector đơn |
 | F2 | FPR Ensemble trong bài báo (6,56%) ≠ FPR Ensemble trong CSV công khai (13,12%) | **Đã kiểm chứng** | Trực tiếp: điểm vận hành công bố không khớp artefact |
-| F3 | Mỗi lớp tấn công được dựng thành **một đồ thị riêng**, không trộn với benign (dùng cho **Table VII**) | **Đã kiểm chứng** (cơ chế) | Table VII: lớn — đồ thị chỉ-attack khác hẳn benign. Table VI: **không áp dụng** vì test graph trộn benign + mọi lớp (PDF §V-A). Tác động chưa định lượng |
+| F3 | Mỗi lớp tấn công được dựng thành **một đồ thị riêng**, không trộn với benign (dùng cho **Table VII**) | **Đã kiểm chứng và đã định lượng** | Table VII: đồ thị chỉ-attack khác hẳn benign, nhưng trên dữ liệu nhóm nó **không** dễ hơn đồ thị trộn (PortScan 0,00% vs 6,32% TPR); Table VI: không áp dụng (PDF §V-A) |
 | F4 | Benign train và benign test cùng lấy từ **Friday** (70/30) | **Đã kiểm chứng** | Trung bình: không có dịch chuyển phân phối giữa train và benign test |
 | F5 | Detector chạy trên **output của decoder** (bản tái tạo 400 chiều), không phải bottleneck | **Đã kiểm chứng** | Trung bình: detector thực chất chạy trên gần như feature thô |
 | F6 | Lớp `GraphAutoencoder` công khai không nối encoder vào decoder và **không chạy được** | **Đã kiểm chứng phần code; chưa chứng minh được mô hình đã chạy** | Không xác định: notebook không phản ánh code đã sinh kết quả |
-| F7 | Nhãn gói tin bị trượt hàng (row-shift) trong repo trích xuất | **Cơ chế đã kiểm chứng; tác động chưa định lượng** | Chưa rõ |
+| F7 | Nhãn gói tin bị trượt hàng (row-shift) trong repo trích xuất | **Đã kiểm chứng và đã định lượng** | Thứ Ba: 13,9% gói sai nhãn, precision nhãn tấn công 11,8%, recall 14,8%, 14,4% flow bị ảnh hưởng (`results/label_shift_f7.csv`) |
 
 ### 5.1 (F1, F2) Luật ensemble và điểm vận hành công bố
 
@@ -139,7 +139,9 @@ CSV công khai của tác giả cho dòng Benign: OCSVM 8,06; IF 9,86; HBOS 9,92
 
 Cell 60 lặp qua `df_test_lst = [('Benign', df_test_benign), ('DoS GoldenEye', df_goldeneye), ...]` và gọi `create_graph_from_df(test_df)` **cho từng lớp riêng**. Đồ thị của một lớp DoS gồm hàng nghìn cạnh cùng đổ về một nạn nhân (hub cực lớn). Trong khi đó đồ thị benign có cấu trúc thưa và đa dạng. Với một encoder có attention trên các cạnh kề nhau, **chính topo đồ thị** đã khác biệt, nên mô hình có thể "phát hiện" lớp tấn công mà không cần đặc trưng gói tin. Bài báo (§V-A, tr. 4035) có nói per-class test graph *"containing edges only belonging to a specific attack type"*, nhưng không bàn về hệ quả này.
 
-Protocol `T` và `P_paper` của nhóm trộn benign với attack trong cùng một đồ thị test, đúng như tình huống triển khai. Đây là khác biệt thiết lập của **Table VII** (và của test 2018/ACI vốn chỉ có tấn công). Với Table VI, bài báo ghi rõ test graph gồm benign + mọi lớp, nên F3 **không** giải thích khoảng cách 99,04% — phần đó do F1/F2/F4/F5. Thí nghiệm nên làm tiếp: dựng lại đồ thị per-class như tác giả trên dữ liệu của nhóm để định lượng.
+Protocol `T` và `P_paper` của nhóm trộn benign với attack trong cùng một đồ thị test, đúng như tình huống triển khai. Đây là khác biệt thiết lập của **Table VII** (và của test 2018/ACI vốn chỉ có tấn công). Với Table VI, bài báo ghi rõ test graph gồm benign + mọi lớp, nên F3 **không** giải thích khoảng cách 99,04% — phần đó do F1/F2/F4/F5.
+
+**Đã định lượng** (`scripts/eval_per_class_graphs.py`, `results/per_class_graphs.csv`): dựng lại đúng kiểu paper trên `P_paper` p8 — mỗi lớp một đồ thị chỉ-tấn-công, embed bằng chính encoder đã train, ngưỡng lấy từ calibration benign. TPR trên đồ thị riêng **thấp hơn hoặc bằng** đồ thị trộn ở mọi lớp: PortScan 0,00% vs 6,32%; DoS Hulk 0,07% vs 0,15%; DoS slowloris 0,10% vs 0,67%; Infiltration 0,98% vs 0,00% (trung bình 3 seed). Tức topo chỉ-attack **không** phải lối tắt mà mô hình của nhóm khai thác được, và cũng **không** đưa TPR tới 98–99% của Table VII. Lưu ý: encoder chưa từng thấy đồ thị chỉ-attack khi train (benign-only), nên đây là phép đo "nếu dùng đúng đồ thị của paper thì mô hình hiện tại làm được gì", không phải phép thử công bằng tuyệt đối cho kiến trúc.
 
 ### 5.3 (F4) Benign train/test cùng một ngày
 
@@ -189,7 +191,9 @@ payload_byte_data = payload_byte_data.dropna()          # bỏ N-M hàng cuối
 ```
 Gán theo chỉ số vị trí nên từ gói nền đầu tiên bị bỏ sót trong cửa sổ tấn công trở đi, mọi nhãn bị **dịch lên** một số vị trí bằng số gói đã bỏ sót. Nhãn tấn công vì thế rơi vào các gói đứng trước nó, có thể là lưu lượng nền.
 
-**Giới hạn:** (a) chúng tôi chưa đếm được số flow bị gán sai trong file `.pkl` của tác giả (không có trong repo công khai); (b) nhãn tấn công rơi vào lưu lượng nền Thứ Ba chỉ làm "tập tấn công" chứa lưu lượng *khác ngày* với benign train Friday, nên không tự giải thích được TPR 99%. F7 vì vậy được xếp là **lỗi phụ**, không phải nguyên nhân chính.
+**Đã định lượng** (`scripts/eval_label_shift.py`, `results/label_shift_f7.csv`, Thứ Ba 2017): 851.306 gói, **269.201 gói nền trong cửa sổ bị bỏ qua** (31,6% số gói) ⇒ đúng 269.201 gói cuối bị `dropna()` xoá; sau khi dịch hàng, **80.848 gói (13,9%** số gói còn lại) mang nhãn sai. Precision của nhãn tấn công còn **11,8%**, recall **14,8%** (45.760 nhãn tấn công rơi vào gói benign; 35.088 gói tấn công mất nhãn); **15.893 flow (14,4%)** có ít nhất một gói sai nhãn. Giả định bảo thủ: gói ngoài cửa sổ được gán benign đúng — nếu notebook chỉ đưa gói tấn công vào `dict_d_labels` thì độ lệch còn lớn hơn.
+
+(b) nhãn tấn công rơi vào lưu lượng nền Thứ Ba chỉ làm "tập tấn công" chứa lưu lượng *khác ngày* với benign train Friday, nên không tự giải thích được TPR 99%. F7 vì vậy được xếp là **lỗi phụ về nhãn**, nhưng nay đã có số: nó đủ lớn để làm hỏng bất kỳ so sánh per-class nào dựa trên `.pkl` của tác giả.
 
 ---
 

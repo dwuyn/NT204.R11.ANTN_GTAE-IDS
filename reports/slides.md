@@ -402,7 +402,7 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
 1. **Tìm hiểu & tái hiện:** pipeline đầy đủ từ pcap, đúng Table III/V và Fig. 3/4; 132 test, 428 kiểm tra artefact. Con số 99,04% @ 6,56% **không tái lập được** (`T`: 4,18%; `P_paper`: 3,25%).
 2. **Đối chiếu & so sánh:** 7 mâu thuẫn có trích dẫn giữa paper, code và CSV; baseline cùng protocol cho thấy attention, LapPE và đồ thị không phải nguồn tín hiệu; claim real-time không đạt.
 3. **Đề xuất:** (A) encoder gọn hơn: AUROC +0,09, ổn định hơn; (B) conformal early-exit: FPR ≤ α nhưng TPR tăng ít.
-4. **Hạn chế:** 3 seed; số của bài liên quan (trừ B2) là nguồn thứ cấp; chưa định lượng F3 và F7; chưa chạy A + B kết hợp.
+4. **Hạn chế:** 3 seed cho baseline/P1 (M1 dùng 7 seed cho đường cong p); số của E-GraphSAGE/PBCNN/SPIN-IDS là nguồn thứ cấp; F3/F7 đã định lượng; chưa chạy A + B kết hợp.
 
 ---
 

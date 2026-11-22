@@ -76,6 +76,9 @@ Không lớp nào đạt 1/3 con số paper. PortScan là lớp "dễ" nhất c�
 | GraphDDoS | 0,967 | 0,993 | 0,978 | 0,981 | 0,967 | 0,983 |
 | GTAE-IDS [1] | 0,996 | 0,988 | 0,991 | 0,996 | 0,993 | 0,994 |
 
+> **Đã đối chiếu PDF gốc** (`docs/related/`, chi tiết: [`related_work_verification.md`](related_work_verification.md)):
+> dòng **E-GraphSAGE** ở bảng này **không có trong bài gốc** (bài gốc đánh giá NF-UNSW-NB15 / NF-ToN-IoT / NF-BoT-IoT, metric F1/FAR, không có CIC-IDS2017 hay TPR từng lớp) — số của [1] là tính lại/không dẫn nguồn, không nên trích như số của E-GraphSAGE; dòng **Pujol-Perich** khớp Bảng 1 của bài gốc (accuracy từng lớp, bỏ 90% benign) nhưng bài gốc **không có** Heartbleed/Infiltration; dòng GraphDDoS và PBCNN/SPIN-IDS vẫn là nguồn thứ cấp (paywall).
+
 **Table XII của [1]** — packet-based không đồ thị, CIC-IDS2017 (TPR / µs mỗi gói):
 
 | Method | TPR | µs/gói |
@@ -102,7 +105,7 @@ Không lớp nào đạt 1/3 con số paper. PortScan là lớp "dễ" nhất c�
 
 | Paper | Số công bố | Điều kiện | So được với nhóm? |
 |---|---|---|---|
-| Anomal-E [8] / [P] | HBOS trên CSE-CIC-IDS2018: macro-F1 **86,28 → 94,51** khi dùng embedding thay đặc trưng thô | NetFlow, self-supervised, contamination 0% | Không cùng metric (macro-F1 vs TPR/AUROC) và không cùng định nghĩa flow |
+| Anomal-E [8] / [P] | HBOS trên CSE-CIC-IDS2018: macro-F1 **86,28 → 94,51** khi dùng embedding thay đặc trưng thô (**đã kiểm chứng**, Bảng 5 của bài gốc) | NetFlow, self-supervised, contamination 0% | Không cùng metric (macro-F1 vs TPR/AUROC) và không cùng định nghĩa flow |
 | GraphIDS [10] / [P] | PR-AUC tới **99,98%**, macro-F1 tới **99,61%** | NetFlow benchmarks, self-supervised | Không; nhưng cùng *kiểu* claim zero-day → đối chiếu §3.4 |
 | Kitsune [11] / [P] | TPR/FPR/AUC trên mạng camera IoT tự dựng | packet-streaming, unsupervised | **[THIẾU NGUỒN]** — số cụ thể chưa trích; cần đọc toàn văn nếu đưa vào báo cáo |
 | nPrint [5] / [P] | không có số TPR trong nguồn đã đọc | — | Chỉ so định tính (căn chỉnh theo trường) |
