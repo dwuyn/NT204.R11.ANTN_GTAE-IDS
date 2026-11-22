@@ -3,8 +3,8 @@
 > Số liệu đồng bộ với `results/*.csv` (retrain 2026-11-16). Mean ± std theo seed: [`seed_stats.md`](seed_stats.md). Đối chiếu paper ↔ code ↔ CSV của tác giả: [`../docs/REPRO_AUDIT.md`](../docs/REPRO_AUDIT.md) §5.
 
 **Cập nhật:** 2026-11-22
-**Đồ án:** NT204.R11.ANTN — Nhóm B — Tái hiện & Cải tiến GTAE-IDS
-**Paper:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026–4041, 2025.
+**Đồ án:** NT204.R11.ANTN - Nhóm 8 - Tái hiện & Cải tiến GTAE-IDS
+**Paper:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026-4041, 2025.
 
 ---
 
@@ -12,12 +12,12 @@
 
 | Phương pháp | Loại mô hình | Phân chia dữ liệu | Luật quyết định | TPR | FPR | AUROC | Ghi chú |
 |---|---|---|---|---:|---:|---:|---|
-| **Paper Table VI** | Graph Transformer AE | Snapshot (code: Friday 70/30) | "Majority vote" (code: OR) | **99,04%** | **6,56%** | — | FPR Ensemble công bố; OCSVM 4,03% (Table VI) |
-| **CSV công khai của tác giả** | Notebook `GTAE_8pkt` (không chạy được như công bố) | Friday 70/30, mỗi lớp 1 đồ thị | Union (votes $\ge 1$) | 98,5–99,8% (theo lớp, = Table VII) | **13,12%** | — | `Final_Results_8pkt_Anomaly_Detection_2017.csv`; FPR ≠ 6,56% của paper |
+| **Paper Table VI** | Graph Transformer AE | Snapshot (code: Friday 70/30) | "Majority vote" (code: OR) | **99,04%** | **6,56%** | - | FPR Ensemble công bố; OCSVM 4,03% (Table VI) |
+| **CSV công khai của tác giả** | Notebook `GTAE_8pkt` (không chạy được như công bố) | Friday 70/30, mỗi lớp 1 đồ thị | Union (votes $\ge 1$) | 98,5-99,8% (theo lớp, = Table VII) | **13,12%** | - | `Final_Results_8pkt_Anomaly_Detection_2017.csv`; FPR ≠ 6,56% của paper |
 | **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **0,50%** | **1,22%** | **0,698** | Ensemble tie yếu; detector INNE đạt 10,21% @ 2,45% |
 | **B1: MLP-AE** | Dense AE (No Graph) | Temporal T | Ensemble tie ($\ge 2/4$) | **6,29%** | **2,29%** | **0,595** | AE chuẩn nén 400d → 64d |
 | **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** | Tái hiện đúng mô tả paper; phương sai seed lớn |
-| **M1 (Official Rules)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | — | — | Không dùng làm kết luận |
+| **M1 (Official Rules)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | - | - | Không dùng làm kết luận |
 | **P_paper: M1 + Union (luật code)** | Graph Transformer AE | Friday CSV-row, test = paper Table VII | Union (votes $\ge 1$) | **3,25%** @ FPR 6,56% matched | **6,56%** | **0,478** | Dựng đúng Table VII: 30.041/33.228 edge; Heartbleed/Infiltration thiếu CSV; TPR@1% 1,39% |
 | **P_paper: M1 + INNE** | Graph Transformer AE + INNE | Friday CSV-row, test = paper Table VII | Detector đơn | **8,31%** @ FPR 6,56% matched | **6,56%** | **0,590** | Detector tốt nhất trên `P_paper`; TPR@1% = 4,12% |
 | **T sạch @ cùng điểm vận hành** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie | **11,54%** @ FPR 6,56% matched | **6,56%** | **0,594** | Đo bằng cùng pipeline `eval_paper_parity.py` |
@@ -29,7 +29,7 @@
 | **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed → Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** | Giới hạn trên phân loại giám sát |
 | **Upper Bound (Same-session RF)** | Random Forest | Same-session (Random) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** | Rò rỉ nhận diện phiên/ngày |
 
-*Ghi chú phương pháp:* các dòng **M1/Ours** dùng ngưỡng riêng của detector ở contamination 0,01 (FPR thực 2,79%). Các dòng **@ FPR 6,56% matched** đặt ngưỡng sao cho FPR thực trên benign test đúng bằng 6,56% — cùng định nghĩa với paper — và grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]`. Cột FPR ở các dòng `P_paper`/`T sạch` là ngưỡng matched với FPR Ensemble công bố trong Table VI (6,56%), không phải FPR của một detector cụ thể. Số đo: `results/paper_parity/`, chi tiết: [`paper_parity.md`](paper_parity.md).
+*Ghi chú phương pháp:* các dòng **M1/Ours** dùng ngưỡng riêng của detector ở contamination 0,01 (FPR thực 2,79%). Các dòng **@ FPR 6,56% matched** đặt ngưỡng sao cho FPR thực trên benign test đúng bằng 6,56% - cùng định nghĩa với paper - và grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]`. Cột FPR ở các dòng `P_paper`/`T sạch` là ngưỡng matched với FPR Ensemble công bố trong Table VI (6,56%), không phải FPR của một detector cụ thể. Số đo: `results/paper_parity/`, chi tiết: [`paper_parity.md`](paper_parity.md).
 
 ---
 
@@ -54,6 +54,6 @@ Proposal P1 giải quyết 3 hạn chế thực tế của GTAE-IDS:
 **Nhận xét:**
 - Với **Bonferroni ($\alpha = 0,05$)**, FPR thực đo **3,64%** ($\le 5\%$) và TPR **8,95%**, cao hơn M1 (4,18% @ 2,79%) ở vùng FPR tương đương. Ở $\alpha=0,10$, TPR **14,11%** @ FPR **5,78%**.
 - Với **Bonferroni ($\alpha = 0,01$)**, TPR/FPR đều 0 vì sàn p-value $4/801 = 0,004994 > 0,01/7$; cấu hình này không thể alert với 800 calibration flow.
-- Với **Fisher**, TPR tăng lên **42,46–49,33%** nhưng FPR **13,57–22,96%**, vượt xa $\alpha$ do 4 detector tương quan. Fisher chỉ nên đọc như exploratory, không dùng để claim kiểm soát FPR.
+- Với **Fisher**, TPR tăng lên **42,46-49,33%** nhưng FPR **13,57-22,96%**, vượt xa $\alpha$ do 4 detector tương quan. Fisher chỉ nên đọc như exploratory, không dùng để claim kiểm soát FPR.
 - **Giới hạn:** tại FPR=1%, Bonferroni đạt TPR 0% và Fisher 2,77%, đều thấp hơn M1 (3,65%). P1 chưa vượt M1 ở vùng FPR thấp; đóng góp là operating point có kiểm soát FPR và phân tích trade-off.
 - **Early-exit:** Bonferroni $\alpha=0,05$ phát hiện sớm **7,70%** attack, APD **7,75 gói**; $\alpha=0,10$ phát hiện sớm **13,22%**, APD **7,56 gói**. Fisher giảm APD mạnh hơn (6,24 gói) nhưng FPR quá cao.

@@ -2,8 +2,8 @@
 marp: true
 theme: default
 paginate: true
-header: "NT204.R11 — Đồ án Nghiên cứu GTAE-IDS — Nhóm B"
-footer: "Trường Đại học Công nghệ Thông tin — ĐHQG-HCM"
+header: "NT204.R11 - Đồ án Nghiên cứu GTAE-IDS - Nhóm 8"
+footer: "Trường Đại học Công nghệ Thông tin - ĐHQG-HCM"
 ---
 
 <!-- CẢNH BÁO: số liệu của lần chạy trước retrain 2026-11-16. Nguồn chuẩn: results/*.csv, docs/DECISIONS.md, reports/ablation.md, reports/P1.md, reports/latency.md. T p8 ensemble-tie: TPR 4,18% @ FPR 2,79%, AUROC 0,594; matched FPR 6,56%: T 11,54%, P_paper 3,25%. -->
@@ -165,7 +165,7 @@ section.lead p {
 # GTAE-IDS: TÁI HIỆN, PHẢN BIỆN VÀ CẢI TIẾN
 ### Đồ án môn học Nghiên cứu NIDS (NT204.R11.ANTN)
 
-**Nhóm thực hiện:** Nhóm B  
+**Nhóm thực hiện:** Nhóm 8  
 **Paper neo:** Ghadermazi et al., *IEEE TIFS 2025* (DOI: `10.1109/TIFS.2025.3557741`)  
 **Giảng viên hướng dẫn:** Bộ môn An toàn Thông tin  
 
@@ -204,7 +204,7 @@ section.lead p {
   [Embeddings Z] ─────> Không gian nhúng tiềm ẩn
        │
        ▼
- [Ensemble PyOD] ─────> OCSVM + IForest + HBOS + INNE ("Majority Vote" — code thực tế: OR)
+ [Ensemble PyOD] ─────> OCSVM + IForest + HBOS + INNE ("Majority Vote" - code thực tế: OR)
 ```
 
 ---
@@ -235,14 +235,14 @@ section.lead p {
   - **Isolation Forest** (150 cây)
   - **HBOS** (20 bins histogram)
   - **INNE** (100 isolation hyper-spheres)
-  - **Bầu chọn đa số ("Majority Vote" — code thực tế: OR):** Cảnh báo nếu $\ge 3/4$ hoặc $\ge 2/4$ bộ dò báo động.
+  - **Bầu chọn đa số ("Majority Vote" - code thực tế: OR):** Cảnh báo nếu $\ge 3/4$ hoặc $\ge 2/4$ bộ dò báo động.
 
 ---
 
 ## 5. Kết quả Tái hiện (Protocol T, mean ± std 3 seed)
 
 - **Hạ tầng:** 51 GB pcap CIC-IDS2017 thô, **132 pytest pass**, 428 kiểm tra artefact, 21 mô hình (7 giá trị $p$ × 3 seed).
-- **Protocol T:** train benign Monday, test Tue–Fri (lựa chọn của nhóm để đo khi phân phối trôi theo thời gian).
+- **Protocol T:** train benign Monday, test Tue-Fri (lựa chọn của nhóm để đo khi phân phối trôi theo thời gian).
 
 | $p$ | TPR (Ours) | FPR (Ours) | AUROC | Paper Table VI |
 |---:|---:|---:|---:|---:|
@@ -252,7 +252,7 @@ section.lead p {
 | **8** | <span class="badge-danger">**4,18 ± 4,30%**</span> | **2,79%** | **0,594 ± 0,106** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
 
 - **Không tái lập được**, kể cả trong `P_paper` (đúng test Table VII + luật OR của code): **3,25%** @ FPR 6,56%.
-- **Tự đánh giá:** AUROC theo seed 0,495–0,705; đường cong theo $p$ **không** đơn điệu như paper.
+- **Tự đánh giá:** AUROC theo seed 0,495-0,705; đường cong theo $p$ **không** đơn điệu như paper.
 
 ---
 
@@ -294,11 +294,11 @@ anomalies_ensemble = (votes >= 1).astype(int)   # OR, không phải đa số
 
 ---
 
-## 8. Chi tiết F3–F6: Thiết lập Đánh giá & Notebook
+## 8. Chi tiết F3-F6: Thiết lập Đánh giá & Notebook
 
-- **F3 – mỗi lớp một đồ thị:** `create_graph_from_df(test_df)` gọi riêng cho từng lớp. Đồ thị DoS có hub cực lớn, khác hẳn topo benign.
-- **F4 – cùng ngày:** train `Friday_benign_train_70%`, test `Friday_benign_test_30%`. Paper chỉ nói *"snapshot at arbitrary timestamp t"*, nên đây là **điểm yếu phương pháp**, không phải mâu thuẫn.
-- **F5 + F6 – notebook (cell 24):**
+- **F3 - mỗi lớp một đồ thị:** `create_graph_from_df(test_df)` gọi riêng cho từng lớp. Đồ thị DoS có hub cực lớn, khác hẳn topo benign.
+- **F4 - cùng ngày:** train `Friday_benign_train_70%`, test `Friday_benign_test_30%`. Paper chỉ nói *"snapshot at arbitrary timestamp t"*, nên đây là **điểm yếu phương pháp**, không phải mâu thuẫn.
+- **F5 + F6 - notebook (cell 24):**
 ```python
 self.transformer_encoder = nn.TransformerEncoder(nn.GraphTransformerLayer(...))  # không tồn tại trong torch.nn
 def forward(self, g, features):
@@ -321,7 +321,7 @@ def forward(self, g, features):
 
 | Tuyên bố của paper | Số đo | Kết luận |
 |---|---|---|
-| Attention cạnh–cạnh là cốt lõi | Mean aggregation tốt hơn | ✘ |
+| Attention cạnh-cạnh là cốt lõi | Mean aggregation tốt hơn | ✘ |
 | Ngữ cảnh đồ thị giúp phát hiện | B0 không đồ thị ≥ M1 | ✘ |
 | Không dùng shortcut định danh | A5 AUROC tăng | ✔ |
 | Real-time 1,28 µs/gói | 15.272 µs/gói end-to-end; 8,2 < 12,1 flow/s | ✘ |
@@ -413,4 +413,4 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
 ### Q & A
 
 **Mã nguồn đồ án:** `github.com/dwuyn/NT204.R11.ANTN_GTAE-IDS_Nhom8`  
-**Liên hệ nhóm:** Nhóm B — Lớp An toàn Thông tin Khóa 2021
+**Liên hệ nhóm:** Nhóm 8 - Lớp An toàn Thông tin Khóa 2021

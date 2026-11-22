@@ -1,9 +1,11 @@
-# NT204.R11.ANTN — Tái hiện, Phản biện và Cải tiến GTAE-IDS
+# NT204.R11.ANTN - Tái hiện, Phản biện và Cải tiến GTAE-IDS
 
-Đồ án môn học **Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập** (NT204.R11.ANTN) — Khoa Mạng máy tính & Truyền thông, Trường Đại học Công nghệ Thông tin, ĐHQG-HCM.
+Đồ án môn học **Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập** (NT204.R11.ANTN) - Khoa Mạng máy tính & Truyền thông, Trường Đại học Công nghệ Thông tin, ĐHQG-HCM.
+
+**Nhóm 8:** Đinh Quốc Thịnh (24521675) · Lê Xuân Nguyên (24520021) · Trần Đình Nguyên (24521208).
 
 **Bài báo nghiên cứu (paper neo):**
-> J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, *"GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection,"* **IEEE Transactions on Information Forensics and Security (TIFS)**, vol. 20, pp. 4026–4041, 2025. DOI: `10.1109/TIFS.2025.3557741`.
+> J. Ghadermazi, S. Hore, A. Shah, N. D. Bastian, *"GTAE-IDS: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection,"* **IEEE Transactions on Information Forensics and Security (TIFS)**, vol. 20, pp. 4026-4041, 2025. DOI: `10.1109/TIFS.2025.3557741`.
 
 ---
 
@@ -11,14 +13,14 @@
 
 | Yêu cầu đề tài | Đóng góp | Tài liệu |
 |---|---|---|
-| Tìm hiểu vấn đề và phương pháp | Phân tích bài báo; liệt kê các điểm bài báo không mô tả nhưng ảnh hưởng tới tái lập | `reports/report.md` Ch.1–2, `docs/GTAE-IDS_Research_docs.md` |
-| Thực hiện lại và đánh giá | Pipeline từ 51 GB pcap; 21 mô hình; **132 test** + 428 kiểm tra artefact; 4 protocol (`T`, `T_fixed`, `R`, `P_paper`); CIC-IDS2018, ACI-IoT-2023; đo độ trễ end-to-end | Ch.3–4 |
-| Phân tích, so sánh với bài liên quan | Đối chiếu bài báo ↔ code ↔ CSV của tác giả; baseline cùng protocol (B0, B1, B2 E-GraphSAGE, A2, A3, A5); đối chiếu từng tuyên bố của bài báo | Ch.5–6, `docs/REPRO_AUDIT.md`, `reports/related_work.md` |
+| Tìm hiểu vấn đề và phương pháp | Phân tích bài báo; liệt kê các điểm bài báo không mô tả nhưng ảnh hưởng tới tái lập | `reports/report.md` Ch.1-2, `docs/GTAE-IDS_Research_docs.md` |
+| Thực hiện lại và đánh giá | Pipeline từ 51 GB pcap; 21 mô hình; **132 test** + 428 kiểm tra artefact; 4 protocol (`T`, `T_fixed`, `R`, `P_paper`); CIC-IDS2018, ACI-IoT-2023; đo độ trễ end-to-end | Ch.3-4 |
+| Phân tích, so sánh với bài liên quan | Đối chiếu bài báo ↔ code ↔ CSV của tác giả; baseline cùng protocol (B0, B1, B2 E-GraphSAGE, A2, A3, A5); đối chiếu từng tuyên bố của bài báo | Ch.5-6, `docs/REPRO_AUDIT.md`, `reports/related_work.md` |
 | Đề xuất cải tiến | (A) encoder mean aggregation / bỏ LapPE; (B) P1 conformal fusion + early-exit | Ch.7, `reports/P1.md` |
 
 ### Phát hiện chính
 1. **Không tái lập được 99,04% TPR @ 6,56% FPR.**
-   - Protocol `T` (train Monday benign, test Tue–Fri): TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106**.
+   - Protocol `T` (train Monday benign, test Tue-Fri): TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106**.
    - `P_paper` (đúng thành phần test của Table II/VII, đúng luật OR của code tác giả): **3,25%** TPR tại cùng FPR 6,56%.
 2. **Mâu thuẫn kiểm chứng được giữa bài báo, code và CSV của tác giả** (`docs/REPRO_AUDIT.md` §5):
    - Table VII trùng khớp từng chữ số với luật **OR** (`votes >= 1`), trong khi bài báo mô tả *majority voting*.
@@ -31,7 +33,7 @@
    - Xoá TTL và checksum không làm giảm AUROC (0,675), nên mô hình không dựa vào shortcut định danh.
 4. **"Real-time" không đạt ở mức triển khai:** 122 ms/flow end-to-end, xử lý 8,2 flow/s trong khi lưu lượng đến là 12,1 flow/s.
 5. **Đề xuất cải tiến:**
-   - **(A)** Bỏ LapPE hoặc dùng mean aggregation: AUROC tăng lên 0,68–0,69, độ lệch chuẩn giữa seed giảm 5–35 lần, TPR @ ngưỡng FPR=1% tăng từ 3,65% lên 11–12%.
+   - **(A)** Bỏ LapPE hoặc dùng mean aggregation: AUROC tăng lên 0,68-0,69, độ lệch chuẩn giữa seed giảm 5-35 lần, TPR @ ngưỡng FPR=1% tăng từ 3,65% lên 11-12%.
    - **(B)** P1 conformal early-exit: Bonferroni giữ FPR thực đo ≤ α (3,64% @ α=0,05; 5,78% @ α=0,10). Tuy nhiên TPR tăng ít, và tại FPR=1% không vượt M1.
 
 ---
@@ -40,16 +42,16 @@
 
 | Phương pháp | Mô hình | Dữ liệu | Luật quyết định | TPR | FPR | AUROC |
 |---|---|---|---|---:|---:|---:|
-| **Paper Table VI** | GTAE-IDS | Snapshot (code: Friday 70/30) | "Majority" (code: OR) | **99,04%** | **6,56%** | — |
-| **CSV công khai của tác giả** | notebook `GTAE_8pkt` | Friday 70/30, mỗi lớp 1 đồ thị | OR (votes ≥ 1) | 98,5–99,8% (theo lớp) | **13,12%** | — |
+| **Paper Table VI** | GTAE-IDS | Snapshot (code: Friday 70/30) | "Majority" (code: OR) | **99,04%** | **6,56%** | - |
+| **CSV công khai của tác giả** | notebook `GTAE_8pkt` | Friday 70/30, mỗi lớp 1 đồ thị | OR (votes ≥ 1) | 98,5-99,8% (theo lớp) | **13,12%** | - |
 | **M1: GTAE tái hiện** | Graph Transformer AE | Protocol T | Ensemble tie (≥ 2/4) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** |
 | P_paper: M1 + OR | Graph Transformer AE | Friday, test = Table VII | OR @ FPR 6,56% matched | **3,25%** | 6,56% | 0,478 |
 | P_paper: M1 + INNE | Graph Transformer AE | Friday, test = Table VII | INNE @ FPR 6,56% matched | 8,31% | 6,56% | 0,590 |
 | B0: vector thô | Không đồ thị | Protocol T | Ensemble tie | 0,50% | 1,22% | 0,698 |
 | B1: MLP-AE | Không đồ thị | Protocol T | Ensemble tie | 6,29% | 2,29% | 0,595 |
-| **A – B2: E-GraphSAGE-AE** | Mean aggregation | Protocol T | Ensemble tie | **9,78%** | **1,81%** | **0,689 ± 0,021** |
-| **A – A2: bỏ LapPE** | GTAE không PE | Protocol T | Ensemble tie | 6,36% | **1,23%** | **0,682 ± 0,003** |
-| **B – P1: Bonferroni α=0,05** | GTAE + conformal | T_fixed | $\pi_{\text{fused}} \le \alpha/7$ | **8,95%** | **3,64%** | 0,662 |
+| **A - B2: E-GraphSAGE-AE** | Mean aggregation | Protocol T | Ensemble tie | **9,78%** | **1,81%** | **0,689 ± 0,021** |
+| **A - A2: bỏ LapPE** | GTAE không PE | Protocol T | Ensemble tie | 6,36% | **1,23%** | **0,682 ± 0,003** |
+| **B - P1: Bonferroni α=0,05** | GTAE + conformal | T_fixed | $\pi_{\text{fused}} \le \alpha/7$ | **8,95%** | **3,64%** | 0,662 |
 | Supervised RF (cận trên) | Random Forest | Tue/Wed → Thu/Fri | Ngưỡng xác suất | 18,1% | 6,7% | 0,92 |
 | Supervised RF (cùng phiên) | Random Forest | Cùng ngày | Ngưỡng xác suất | 99,4% | 6,1% | 0,97 |
 

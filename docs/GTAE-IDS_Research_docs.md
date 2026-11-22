@@ -53,7 +53,7 @@
 3. 25 byte được giữ lại vẫn chứa **TTL, IP ID, IP checksum, TCP checksum, sequence/ack number** (Fig. 3) — hai checksum được tính từ chính IP/port đã bị xóa → rò rỉ gián tiếp; TTL là "lối tắt" (shortcut) đã biết của các bộ dữ liệu lab.
 4. Với nút = (IP, port), cổng nguồn tạm thời (ephemeral) gần như duy nhất cho mỗi luồng: train-1 có 7.023–7.160 nút cho 5.000 cạnh (Table II) → bậc trung bình ≈ 1,4; ngữ cảnh đồ thị chủ yếu đến từ các "hub" dịch vụ đích.
 
-**Scope đồ án nhóm B** (chi tiết §4.0): **MUST** — tái hiện pipeline trên CIC-IDS2017, TCP, p ∈ {2, 4, 8}, ≥ 2 lớp tấn công (DoS Hulk + PortScan) + benign, GTAE + IF + OCSVM, báo TPR/FPR. **SHOULD** — p = 2…8, đủ lớp tấn công của Table VII, 4 detector + voting, baseline B0/B1/B2. **MAY** — CIC-IDS2018 (kèm benign để đo FPR), đo latency, ablation.
+**Scope đồ án nhóm 8** (chi tiết §4.0): **MUST** — tái hiện pipeline trên CIC-IDS2017, TCP, p ∈ {2, 4, 8}, ≥ 2 lớp tấn công (DoS Hulk + PortScan) + benign, GTAE + IF + OCSVM, báo TPR/FPR. **SHOULD** — p = 2…8, đủ lớp tấn công của Table VII, 4 detector + voting, baseline B0/B1/B2. **MAY** — CIC-IDS2018 (kèm benign để đo FPR), đo latency, ablation.
 
 **Kết quả kỳ vọng & tiêu chí thành công.** (i) Pipeline chạy end-to-end từ pcap → alert với 1 lệnh train + 1 lệnh eval; (ii) có đường cong TPR–p và FPR–p cho ít nhất 3 giá trị p; (iii) bảng "paper vs ours" có giải thích chênh lệch; (iv) một cải tiến chính (Proposal P1, §6) được đo bằng **TPR tại FPR mục tiêu cố định** và **số gói trung bình đến khi quyết định**, so với baseline GTAE của chính nhóm. Không đặt mục tiêu "đạt 99%": tiêu chí đạt là **tái hiện được xu hướng** (TPR tăng theo p; GTAE ≥ baseline không đồ thị B0 trong ablation tương ứng Table X).
 
@@ -544,7 +544,7 @@ Theo danh sách "Cited by" trên IEEE Xplore (47 trích dẫn, truy cập 13/10/
 ## 4. Kế hoạch tái hiện (engineering spec)
 
 ### 4.0 Quyết định scope
-**Nhóm B chọn: MUST bắt buộc hoàn thành trước tuần 8, SHOULD là mục tiêu chính, MAY chỉ làm phần "CIC-IDS2018 kèm benign".**
+**Nhóm 8 chọn: MUST bắt buộc hoàn thành trước tuần 8, SHOULD là mục tiêu chính, MAY chỉ làm phần "CIC-IDS2018 kèm benign".**
 
 | Mức | Nội dung | Tiêu chí xong |
 |---|---|---|
@@ -916,7 +916,7 @@ flowchart LR
 - *Linear attention (Performer)* — MDT của paper đã ở mức µs; nút cổ chai thực tế là I/O và LapPE, không phải attention.
 - *Explainability attention rollout* — có giá trị trình bày nhưng không có metric "thắng" rõ ràng; làm phụ nếu dư thời gian (heatmap 25 byte × p cho 1 flow DoS Hulk).
 
-### Khuyến nghị cho nhóm B
+### Khuyến nghị cho nhóm 8
 **Chọn P1 làm proposal chính**, P2 chạy như ablation A5. Lý do: (a) vá đúng điểm yếu đo được từ số liệu của chính paper (FPR ensemble, early-exit chưa được đánh giá); (b) không phải huấn luyện lại encoder → khả thi trong 4–6 tuần kể cả khi GPU yếu; (c) đo được bằng metric rõ ràng (FPR thực đo vs α, TPR@FPR, số gói đến quyết định) so với baseline GTAE của chính nhóm.
 
 ---

@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PANDOC="${PANDOC:-pandoc}"
-OUT="${OUT:-$ROOT/reports/GTAE-IDS_NhomB_BaoCao.pdf}"
+OUT="${OUT:-$ROOT/reports/GTAE-IDS_Nhom8_BaoCao.pdf}"
 
 "$PANDOC" "$ROOT/reports/report.md" \
   -o "$OUT" \
@@ -27,7 +27,7 @@ OUT="${OUT:-$ROOT/reports/GTAE-IDS_NhomB_BaoCao.pdf}"
   -V linkcolor=blue \
   -V urlcolor=blue \
   -V lang=vi \
-  --metadata title="GTAE-IDS — Báo cáo đồ án" \
-  --metadata author="NT204.R11.ANTN"
+  --metadata title="GTAE-IDS - Báo cáo đồ án" \
+  --metadata author="Nhóm 8 - NT204.R11.ANTN"
 
 echo "wrote $OUT"
