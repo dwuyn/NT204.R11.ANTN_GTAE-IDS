@@ -5,11 +5,17 @@ scope:
   profile: MUST+SHOULD+MAY
   datasets: [CIC-IDS2017]
   may_items:
-    - cicids2018_with_benign   # generalization with a real FPR
-    - latency                  # end-to-end + us/packet
-    - header_hygiene           # P2 ablation (TTL, checksums)
+    - cicids2018_with_benign   # 1 day only: full 2018 pcap is 444.5 GiB (10 days), disk is 122 GB
+    - latency                  # end-to-end online: no-PE checkpoint + rolling 120 s window
+    - header_hygiene           # A5: zero TTL + IP/TCP checksums, retrain p8 x 3 seed
+    - aci_iot_2023_tcp_subset  # Kaggle mirror (CC BY 4.0, author-mirrored), 3/6 classes TCP-representable
   excluded:
-    - ACI-IoT-2023             # IEEE DataPort, 32 GB; outside default plan
+    # ACI-IoT-2023 non-TCP classes: ICMP Flooding, Ping Sweep (ICMP) and ARP Spoofing
+    # (no IP/TCP header) are outside the 25-byte TCP/IPv4 contract in
+    # src/packet_encoder.py; the paper reports them without describing an encoding.
+    - aci_non_tcp_classes
+    # Full ACI download is 82.70 GiB across 3068 files; only the TCP subset is fetched.
+    - ACI-IoT-2023-full
 
 repo:
   code: this repository

@@ -1,5 +1,9 @@
 # NT204.R11.ANTN — Tái hiện, Phản biện và Cải tiến GTAE-IDS (Nhóm B)
 
+> **⚠️ Số liệu trong tệp này là của lần chạy TRƯỚC khi retrain (2026-11-16).**
+> Toàn bộ checkpoint đã được huấn luyện lại từ đầu (recipe: 100 epoch, `--patience 100`, CPU) và mọi CSV/report sinh tự động đã được tái tạo. Nguồn chuẩn hiện tại: `results/M1_summary.csv`, `results/P1_summary.csv`, `results/paper_parity/`, `results/ablation.csv`, `results/latency_summary.json`, `results/engelen_*.csv`; diễn giải: `docs/DECISIONS.md`, `reports/ablation.md`, `reports/P1.md`, `reports/latency.md`.
+> Các số đã thay đổi đáng kể (ví dụ `T` p8 ensemble-tie: TPR **4,18%** @ FPR **2,79%**, AUROC **0,594**; matched FPR 6,56%: `T` **11,54%**, `P_paper` **3,25%**). Các bảng thủ công dưới đây **chưa** được đồng bộ.
+
 Đồ án môn học **Nghiên cứu Hệ thống Phát hiện & Ngăn ngừa Xâm nhập** (NT204.R11.ANTN) — Khoa Mạng máy tính & Truyền thông, Trường Đại học Công nghệ Thông tin, ĐHQG-HCM.
 
 **Bài báo nghiên cứu (Paper neo):**
@@ -9,9 +13,11 @@
 
 ## 1. Tóm tắt Đóng góp & Phát hiện Nghiên cứu
 
-1. **Tái hiện độc lập nghiêm ngặt:** Xây dựng lại toàn bộ pipeline kỹ thuật xử lý dữ liệu từ 51 GB file pcap thô (CIC-IDS2017), mã hóa 25 byte IP/TCP header, xây dựng đồ thị Line-Graph Attention, huấn luyện 21 mô hình GTAE trên GPU T4, kiểm thử với **83 bài unit/integration test** và **428 bài kiểm tra chéo artifact** không rò rỉ dữ liệu.
+1. **Tái hiện độc lập nghiêm ngặt:** Xây dựng lại toàn bộ pipeline kỹ thuật xử lý dữ liệu từ 51 GB file pcap thô (CIC-IDS2017), mã hóa 25 byte IP/TCP header, xây dựng đồ thị Line-Graph Attention, huấn luyện 21 mô hình GTAE trên GPU T4, kiểm thử với **95 bài unit/integration test** và **428 bài kiểm tra chéo artifact** không rò rỉ dữ liệu.
 2. **Phát hiện phản biện học thuật đối với bài báo gốc:**
    - Kết quả công bố của bài báo (**TPR 99,04% ở FPR 6,56%**) **không thể tái lập trong môi trường IDS thời gian thực, không rò rỉ dữ liệu** (kết quả tái hiện sạch Protocol T đạt TPR 11,4% ở FPR 2,5%).
+   - **Không phải shortcut checksum (A5):** zero TTL + IP/TCP checksum rồi train lại → AUROC **0,675** (M1: 0,594), TPR@FPR=1% **3,77%** (M1: 3,65%) ⇒ tín hiệu không đến từ byte phụ thuộc IP/port.
+   - **Không phải artefact của tập test:** protocol thứ tư `P_paper` dựng lại đúng Table II/VII từ dòng CSV CICFlowMeter (zero-pad flow ngắn, grid contamination Table V, luật OR của code tác giả) vẫn chỉ đạt **TPR 3,25% @ FPR 6,56%** (detector tốt nhất INNE 8,31%); các edge đủ 8 gói của DDoS/DoS Hulk/GoldenEye có AUROC 0,35–0,47, tức lớp chủ lực của paper mới là phần không tách được. Hai lớp **không thể** tái lập từ artefact công khai: Heartbleed 11/1.468, Infiltration 34/1.764 dòng flow TCP trong CSV.
    - Mổ xẻ trực tiếp mã nguồn mở chính thức của tác giả (`jalalgh7/graph-representation-learning-for-NIDS` và `jalalgh7/robust-and-real-time-NIDS`), nhóm phát hiện **4 nguyên nhân kỹ thuật cốt lõi**:
      1. *Lỗi lệch nhãn gói tin (Label Row-Shift):* Thiếu nhánh `else` trong vòng lặp tiền xử lý khiến cột nhãn bị trượt hàng, gán nhãn tấn công cho lưu lượng bình thường đầu ngày.
      2. *Lỗi ngắt kết nối Transformer Encoder:* Trong `GraphAutoencoder.forward()`, biến `edge_features` bị bỏ qua và `features` thô được truyền thẳng vào decoder, biến mô hình thực tế thành một tầng tuyến tính `Linear(400, 400)`.
@@ -19,7 +25,7 @@
      4. *Luật bầu chọn OR và ghép chỉ số:* Tác giả sử dụng luật hợp logic (OR, `votes >= 1`), làm FPR trên Benign tăng lên **13,12%**, nhưng lại trích dẫn ghép TPR của Ensemble với FPR của riêng OCSVM (6,56%).
 3. **Đề xuất cải tiến P1 (Calibrated Conformal Early-Exit):**
    - Ứng dụng Conformal Prediction để chuẩn hóa điểm số bất thường; Bonferroni kiểm soát FPR thực nghiệm ($\le \alpha$) khi calibration và benign test exchangeable, còn Fisher chỉ mang tính exploratory vì detector tương quan.
-   - Cơ chế phát hiện sớm tuần tự (Sequential Early-Exit): cho phép báo động ngay từ $p=2..7$ gói tin. Với calibration 40%, Bonferroni đạt **TPR 16,92% @ FPR 3,43%** ở $\alpha=0,05$ và **23,47% @ 6,18%** ở $\alpha=0,10$; Fisher cho TPR 47,7% nhưng FPR 17,7% nên chỉ là exploratory. Tại FPR=1%, P1 chưa vượt M1 (9,64% ở p=8).
+   - Cơ chế phát hiện sớm tuần tự (Sequential Early-Exit): cho phép báo động ngay từ $p=2..7$ gói tin. Với calibration 40%, Bonferroni đạt **TPR 8,95% @ FPR 3,64%** ở $\alpha=0,05$ và **14,11% @ 5,78%** ở $\alpha=0,10$; Fisher cho TPR 42,5–49,3% nhưng FPR 13,6–23,0% nên chỉ là exploratory. Tại FPR=1%, P1 chưa vượt M1 (3,65% ở p=8).
 
 ---
 
@@ -31,12 +37,14 @@
 | **Official Repo Code** | Disconnected Linear AE | Friday 70/30 | Union (votes $\ge 1$) | **98,74%** | **13,12%** | — |
 | **B0: Raw Vector** | PyOD Detectors (Không đồ thị) | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **0,50%** | **1,22%** | **0,698** |
 | **B1: MLP-AE** | Dense AE (Không đồ thị) | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **11,36%** | **2,47%** | **0,668** |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **16,92%** | **3,43%** | **0,656** |
+| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18%** | **2,79%** | **0,594** |
+| **P_paper: M1 + OR (luật code)** | Graph Transformer AE | Friday CSV-row, test = paper Table VII | Union ($\ge 1/4$) @ FPR 6,56% matched | **3,25%** | **6,56%** | **0,478** |
+| **P_paper: M1 + INNE** | Graph Transformer AE + INNE | Friday CSV-row, test = paper Table VII | Detector đơn @ FPR 6,56% matched | **8,31%** | **6,56%** | **0,590** |
+| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **8,95%** | **3,64%** | **0,662** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** |
 
-*Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector và cùng FPR trước khi kết luận graph transformer tốt hơn. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,64%); P1 chỉ thắng ở vùng FPR ~3–4%.*
+*Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector và cùng FPR trước khi kết luận graph transformer tốt hơn. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (3,65%); P1 chỉ thắng ở vùng FPR ~3–4%.*
 
 ---
 
@@ -70,7 +78,7 @@ ids-proj/
 │   ├── train_all.py       # Huấn luyện toàn bộ mô hình (hỗ trợ resume)
 │   └── audit_artifacts.py # Kiểm toán tự động 428 tiêu chí dữ liệu
 ├── src/                   # Mã nguồn chính của pipeline GTAE-IDS và P1
-├── tests/                 # 83 bài kiểm thử tự động pytest
+├── tests/                 # 95 bài kiểm thử tự động pytest
 └── requirements.txt       # Dependency pins cho Python 3.11
 ```
 

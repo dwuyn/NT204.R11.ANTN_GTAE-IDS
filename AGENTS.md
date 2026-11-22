@@ -41,6 +41,8 @@ flowchart LR
 | Embed | `src/embed.py` | `.npz` embeddings (`z`, `flow_id`, `day`, `y`, `attack_type`, `p`) or in-memory `z` |
 | Detect + evaluate | `python -m src.eval` | per-run JSON + summary CSV |
 | Baselines/P1 | `scripts/eval_baselines_p1.py` | `results/B0_summary.csv`, `B1_summary.csv`, `P1_summary.csv`, `P1_meta.json` |
+| Online latency | `scripts/eval_latency.py` | `results/latency.csv`, `latency_summary.json`, `early_exit_timing.csv`, `reports/latency.md` |
+| Label audit | `scripts/engelen_labels.py` | `results/engelen_composition.csv`, `engelen_confusion.csv`, `engelen_relabel_metrics.csv` |
 | Audit | `scripts/audit_artifacts.py` | 428 cross-checks over raw/processed/graph artifacts |
 
 ### Data model and invariants
@@ -165,8 +167,36 @@ PYTHONPATH=. python scripts/eval_baselines_p1.py
 PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only --calibration-fraction 0.4
 python scripts/make_p1_report.py      # regenerates reports/P1.md from CSV
 
+# Online latency: end-to-end pcap replay (no-PE headline) + early-exit cost
+python scripts/eval_latency.py --mode stream --pcap data/raw/Friday-WorkingHours.pcap \
+  --day friday --graphs data/graphs/T --models experiments/T_noPE --p 8 --sample-every 100 --out results
+python scripts/eval_latency.py --mode early-exit --graphs data/graphs/T_fixed \
+  --models experiments/T --alpha 0.05 0.10 --seeds 0 1 2 --out results
+
+# Engelen label audit (L1 composition, L2 matching, L3 re-scoring, L4 retrain)
+python scripts/engelen_labels.py --compose
+python scripts/engelen_labels.py --map
+python scripts/engelen_labels.py --relabel-eval
+python scripts/build_engelen_graphs.py --p 8
+
 # 5-minute demo; wrapper sets PYTHONPATH and cwd
 ./demo/run_demo.sh
+```
+
+### Paper-parity protocol (P_paper)
+
+```bash
+# Rebuild the paper-faithful split from CICFlowMeter CSV rows (~12 min, reads all 51 GB pcap)
+python scripts/build_paper_graphs.py --out data/graphs/P_paper --ps 8 --seed 0
+python scripts/check_paper_counts.py --graphs data/graphs/P_paper --p 8
+
+# Evaluate at the paper operating points (contamination grid, FPR 6.56% and 1%)
+python scripts/eval_paper_parity.py --protocols P_paper T --ps 8 --seeds 0 1 2 \
+  --out results/paper_parity --device cpu --write-report
+
+# GPU training for P_paper p=8 (see kaggle/paper_parity/README.md)
+python scripts/stage_kaggle_paper_dataset.py
+kaggle kernels push -p kaggle/paper_parity
 ```
 
 ### Reports and diagnostics
@@ -237,6 +267,19 @@ python scripts/make_ablation_report.py  # results/ablation.csv + reports/ablatio
 | `scripts/make_ablation_report.py` | Consolidates M1/B0/B1/A3 into `results/ablation.csv` + `reports/ablation.md`. |
 | `scripts/train_fullgraph.py` | One-off full-graph ablation (no 200-edge subgraph sampling). |
 | `scripts/repro_cic_flows.py` | Rebuild authors' CICFlowMeter-style segmentation for comparison. |
+| `src/cic_graph.py` | `P_paper`: CSV-row flows, zero-padded edges, paper Table VII counts, packet matching. |
+| `scripts/build_paper_graphs.py` | Builds `data/graphs/P_paper` (separate from T/R/T_fixed). |
+| `scripts/check_paper_counts.py` | Count/composition check vs paper Table II/VII; writes `results/P_paper_counts.csv`. |
+| `scripts/eval_paper_parity.py` | Contamination grid + FPR 6.56%/1% operating points; writes `results/paper_parity/` + `reports/paper_parity.md`. |
+| `scripts/stage_kaggle_paper_dataset.py` | Stages + uploads the Kaggle dataset for `kaggle/paper_parity`. |
+| `src/parse_pcap.py::iter_flows` | Streaming flow generator (`packets=[(ts, kept25, dir)]`, `on_packet` hook for global order); `parse_pcap` is a thin writer on top. |
+| `src/streaming.py` | `WindowGraph` (rolling 120 s graph, heap expiry, compaction) + `embed_rows` (stage-timed encode). |
+| `src/model_egsage.py` | B2 baseline: `MeanAggLayer`/`EGraphSAGE` — same depth/width as `ARCH[p]`, mean aggregation instead of attention. |
+| `scripts/eval_latency.py` | `--mode stream` (end-to-end pcap replay, per-stage µs) and `--mode early-exit` (per-step forward cost). |
+| `scripts/engelen_labels.py` | Engelen L1/L2/L3: composition, 5-tuple+timestamp matching (offset measured, ±60 s), re-scoring. |
+| `scripts/build_engelen_graphs.py` | L4: `data/graphs/T_engelen` (drops non-benign train edges, relabels test). |
+| `docs/DECISIONS.md` | Locked scope/protocol/measurement decisions with the numbers that forced them. |
+| `reports/related_work.md` | Manual, sourced comparison vs related work: same-protocol baselines measured by us (B0/B1/B2/A3/A5/P1) + published numbers with their conditions. |
 | `configs/data.yaml` | Frozen flow/split/sampling decisions. |
 | `configs/cicids2017_schedule.yaml` | 18 attack windows, attacker/victim/NAT/ports. |
 | `tests/test_encoder.py` | Fig. 3 vector, options stripping, no IP/port leakage. |
@@ -286,8 +329,37 @@ python scripts/make_ablation_report.py  # results/ablation.csv + reports/ablatio
 2. **Some Markdown tables are manually maintained.** B0/B1/P1 numbers in `reports/report.md`, `README.md`, `reports/slides.md`, and `reports/paper_vs_ours.md` must be kept in sync with `results/*.csv`. If a number disagrees, trust the CSV.
 3. **Conformal caveat**: Fisher fusion assumes independent p-values; the four detectors are correlated. Measured FPR is ~17.7% (α=0.05) and ~22.3% (α=0.10) for Fisher, so Fisher is exploratory only. Bonferroni with 800 calibration flows gives FPR 3.43% @ α=0.05 and 6.18% @ α=0.10.
 4. **Calibration floor**: Bonferroni with 400 calibration flows cannot alert at α=0.05 because `4/401 ≈ 0.009975 > 0.05/7`. P1 defaults to `--calibration-fraction 0.4` (800 flows); keep that choice or document the floor. At FPR=1%, P1 Bonferroni is 0% TPR, below M1's 9.64%.
-5. **Do not reintroduce IP/port/protocol into edge features.** The 25-byte encoding intentionally excludes them; `tests/test_leakage.py` and `test_encoder.py` pin this. Checksum bytes still depend on IP/port — known shortcut risk, not yet ablated.
+5. **Do not reintroduce IP/port/protocol into edge features.** The 25-byte encoding intentionally excludes them; `tests/test_leakage.py` and `test_encoder.py` pin this. Checksum/TTL bytes still depend on IP/port/path, but this is now **measured, not assumed**: A5 (`scripts/eval_hygiene.py`, `src.packet_encoder.HYGIENE_POSITIONS = (6,7,8,21,22)`) zeroes TTL + both checksums and retrains. Current run (100 epochs, 3 seeds): ensemble AUROC 0.594 → 0.675, and every bin-independent detector rises (IForest +0.076, OCSVM +0.077, INNE +0.058, `reports/ablation.md` §3) — removing the identity-ish bytes does not collapse separability. The identity shortcut is therefore not the source of the separability. Caveat: if HBOS cannot bin the masked embeddings it degrades itself (see pitfall 13).
 6. **Do not use attack labels during training or detector fitting.** `train1`/`train2` must remain benign-only; only `test` labels are for evaluation.
 7. **`demo/run_demo.py` needs `PYTHONPATH=.`** (or use `demo/run_demo.sh`, which sets it). It loads real checkpoints and `data/graphs/T_fixed`, so it fails on a clean clone without artifacts.
 8. **Large files are intentionally untracked.** Do not `git add data/`, `experiments/`, `*.pt`, `*.npy`, or `artifacts/`.
 9. **P1 CSV schema now includes `auroc` and `tpr_at_fpr_1pct`.** The ranking score is `1 - min_p` across packet budgets; `P1_meta.json` records calibration fraction and `n_calib`.
+10. **`P_paper` is a separate protocol, never mixed with `T`.** `data/graphs/P_paper` uses CICFlowMeter CSV rows as flow definitions (paper Table VII counts, zero-padded short flows) and needs its own checkpoints in `experiments/P_paper`; `T` checkpoints do not transfer. Its test set is 30,041 edges, not the paper's 33,228, because the CSVs contain only 11 Heartbleed and 36 Infiltration TCP rows (paper: 1,468 / 1,764). `scripts/check_paper_counts.py` reports those as `csv_pool_exhausted`; never synthesize rows or loosen the check.
+11. **CPU training is not bit-reproducible.** Two runs with the same seed and identical graphs produce near-identical loss curves but can select a different `best_state` epoch (val MSE differs at ~1e-6), hence different weights and embeddings. Do not treat `experiments/T/p8/seed2` and a retrain of the same seed as the same model, and do not diff their outputs as if they were code changes.
+12. **Latency numbers come from `scripts/eval_latency.py`, and every flow is not timed.** `--sample-every` times one flow in K; `n_flows` (replayed) and `n_measured` are separate fields. `stale` flows are those whose own `t_last` already fell outside the window at decision time — structural when `window == idle_timeout` and dominant for capture-boundary closures (3,116 of 3,492 on Friday). Read `us_total_fresh` for the flows a deployed system would actually alert on, and never quote the mean without the stale share. Full-window recompute is ~122 ms/flow (8 flows/s) vs Friday's 12 flows/s arrival: it is not real-time at W=120 s on one CPU.
+13. **PyOD HBOS cannot bin sparse/degenerate embedding columns.** `src.detectors.fit_detectors` degrades in a recorded, bounded way (drop columns with <3 distinct float32 values, then walk `n_bins` down to pyod's floor of 3) and writes the adjustment to `detector_fit_notes` in the run JSON. Healthy fits are untouched (empty notes). When comparing runs, check the notes first: a different `n_bins` makes HBOS — and the ensemble that includes it — not directly comparable.
+14. **`results/latency.csv` is ~450 KB of per-flow measurements and is committed on purpose**; delete and re-run instead of hand-editing it. `reports/latency.md` and `reports/ablation.md` are generated — never hand-edit.
+
+## Cross-dataset and reproduction additions (2026-11-21)
+
+- **`data/graphs/2018/`** — one-day CIC-IDS2018 protocol (cutoff = earliest attack flow; train
+  benign before it, test benign after + 5,000 Hulk). Built by `scripts/build_cross_dataset_graphs.py
+  --processed data/processed/2018 --out data/graphs/2018`.
+- **`data/graphs/aci/`** — ACI-IoT-2023 cross-day protocol (train benign 2023-10-31, test benign
+  2023-11-03 + 5,000 per attack class). Same builder with `--train-tags aci_benign1
+  --test-benign-tags aci_benign2`.
+- **`data/graphs/P_paper/p2..p8`** — paper-parity graphs for every p (`scripts/build_paper_graphs.py
+  --ps 2 3 4 5 6 7 8`, one 51 GB pass). `P_paper` zero-pads short flows, so test edges are constant
+  30,041 while paper Table II shrinks 38,984 -> 33,228.
+- **`results/2018/`, `results/aci/`, `results/wait_p.csv`, `results/P_paper_table2.csv`** — the new
+  measurement tables; `reports/cross_dataset.md` (2018 + ACI + wait_p) and `reports/paper_parity.md`
+  (sections 1b/1c/3b) are the generated/derived summaries.
+- **`scripts/eval_paper_parity.py --report-only`** — regenerate the report from `*_selected.json`
+  without re-evaluating models (seconds instead of ~40 min).
+- **PCAP merging pitfall:** `cat a.pcap b.pcap` is invalid (each file's 24-byte global header is read
+  as a packet record; a 13 GiB merge yielded 208 packets). Use `scripts/merge_pcaps.py`, which keeps
+  one header and validates that the rest are byte-identical.
+- **ACI clock:** the capture epoch runs 4 h ahead of the filename/README clock (offset −240 min,
+  measured; with 0 the labeler finds 0 attacks). **CIC-IDS2018 CSV defect:** no IP columns and
+  degenerate timestamps, so labels come from `configs/cicids2018_schedule.yaml` (offset −240
+  measured from the flow-burst boundaries).

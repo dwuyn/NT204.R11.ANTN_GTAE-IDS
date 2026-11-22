@@ -6,6 +6,8 @@ header: "NT204.R11 — Đồ án Nghiên cứu GTAE-IDS — Nhóm B"
 footer: "Trường Đại học Công nghệ Thông tin — ĐHQG-HCM"
 ---
 
+<!-- CẢNH BÁO: số liệu của lần chạy trước retrain 2026-11-16. Nguồn chuẩn: results/*.csv, docs/DECISIONS.md, reports/ablation.md, reports/P1.md, reports/latency.md. T p8 ensemble-tie: TPR 4,18% @ FPR 2,79%, AUROC 0,594; matched FPR 6,56%: T 11,54%, P_paper 3,25%. -->
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap');
 
@@ -246,10 +248,10 @@ section.lead p {
 
 | $p$ | TPR Tái hiện (Ours) | FPR Tái hiện (Ours) | AUROC | Paper Table VI |
 |---:|---:|---:|---:|---:|
-| 2 | 8,58% | 5,90% | 0,551 | — |
-| 4 | 11,70% | 3,62% | 0,625 | — |
-| 6 | 6,49% | 2,92% | 0,794 | — |
-| **8** | <span class="badge-danger">**11,36%**</span> | **2,47%** | **0,668** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
+| 2 | 3,30% | 2,89% | 0,505 | — |
+| 4 | 8,56% | 2,94% | 0,578 | — |
+| 6 | 14,93% | 2,29% | 0,835 | — |
+| **8** | <span class="badge-danger">**4,18%**</span> | **2,79%** | **0,594** | <span class="badge-success">**99,04% (FPR 6,56%)**</span> |
 
 $\implies$ **Khoảng cách khổng lồ:** Mô hình sạch không thể tách biệt tấn công chưa từng gặp ở FPR thấp!
 
@@ -327,18 +329,18 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 
 | $\alpha$ mục tiêu | Phương pháp | TPR thực đo | FPR thực đo | APD Tấn công | APD Bình thường | Tỉ lệ dừng sớm |
 |---|---|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 39,87% | 11,81% | 6,42 pkts | 7,44 pkts | 39,66% |
-| **0,05** | Fisher | **47,67%** | **17,73%** | **5,90 pkts** | 7,14 pkts | **47,47%** |
-| **0,10** | Fisher | 51,43% | 22,26% | 5,72 pkts | 6,92 pkts | 51,15% |
+| **0,01** | Fisher | 42,46% | 13,57% | 6,44 pkts | 7,41 pkts | 41,57% |
+| **0,05** | Fisher | **47,53%** | **18,86%** | **6,24 pkts** | 7,23 pkts | **46,98%** |
+| **0,10** | Fisher | 49,33% | 22,96% | 6,16 pkts | 7,08 pkts | 48,58% |
 | **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% |
-| **0,05** | Bonferroni | **16,92%** | **3,43%** | 7,57 pkts | 7,89 pkts | 15,66% |
-| **0,10** | Bonferroni | **23,47%** | **6,18%** | 7,33 pkts | 7,79 pkts | 22,24% |
+| **0,05** | Bonferroni | **8,95%** | **3,64%** | 7,75 pkts | 7,91 pkts | 7,70% |
+| **0,10** | Bonferroni | **14,11%** | **5,78%** | 7,56 pkts | 7,84 pkts | 13,22% |
 
 ### Điểm nhấn quan trọng:
-- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,43%** và TPR **16,92%**; $\alpha=0,10$ đạt FPR **6,18%** và TPR **23,47%**.
-- **Fisher không kiểm soát FPR:** TPR 47,7% nhưng FPR **17,73%** do 4 detector tương quan; chỉ dùng làm exploratory.
-- **TPR@FPR=1%:** Bonferroni 0%, Fisher 6,07%, đều thấp hơn M1 (9,64%) — P1 chưa thắng ở vùng FPR thấp.
-- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,57 gói**; $\alpha=0,10$ xuống **7,33 gói**.
+- **Bonferroni kiểm soát FPR:** $\alpha=0,05$ đạt FPR **3,64%** và TPR **8,95%**; $\alpha=0,10$ đạt FPR **5,78%** và TPR **14,11%**.
+- **Fisher không kiểm soát FPR:** TPR 42,5–49,3% nhưng FPR **13,6–23,0%** do 4 detector tương quan; chỉ dùng làm exploratory.
+- **TPR@FPR=1%:** Bonferroni 0%, Fisher 2,77%, đều thấp hơn M1 (3,65%) — P1 chưa thắng ở vùng FPR thấp.
+- **Early-exit:** Bonferroni $\alpha=0,05$ giảm APD tấn công xuống **7,75 gói**; $\alpha=0,10$ xuống **7,56 gói**.
 
 ---
 
@@ -350,14 +352,14 @@ Nhằm khắc phục triệt để các hạn chế đo lường và tính thờ
 | **Official Repo Code** | Disconnected Linear AE | Friday 70/30 (OR vote) | **98,74%** | **13,12%** | — |
 | **B0: Raw Vector** | PyOD Detectors (No Graph) | Temporal T (Sạch) | **0,50%** | **1,22%** | **0,698** |
 | **B1: MLP-AE** | Dense AE (No Graph) | Temporal T (Sạch) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **11,36%** | **2,47%** | **0,668** |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **16,92%** | **3,43%** | **0,656** |
-| **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | **23,65%** | **4,17%** | **0,676** |
-| **A2: No LapPE** | GTAE without PE | Temporal T (Sạch) | **6,21%** | **2,24%** | **0,690** |
+| **M1: GTAE-IDS (Ours)** | Graph Transformer AE | Temporal T (Sạch) | **4,18%** | **2,79%** | **0,594** |
+| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | **8,95%** | **3,64%** | **0,662** |
+| **A3: Reconstruction error** | GTAE decoder MSE | Temporal T (Sạch) | **6,01%** | **2,07%** | **0,649** |
+| **A2: No LapPE** | GTAE without PE | Temporal T (Sạch) | **6,36%** | **1,23%** | **0,682** |
 | **Supervised RF (Upper Bound)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | **18,1%** | **6,7%** | **0,92** |
 | **Supervised RF (Same-day)** | Random Forest | Same-session (Cùng ngày) | **99,4%** | **6,1%** | **0,97** |
 
-*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,64%).*
+*B0 ensemble tie rất thấp; B0 + INNE đạt 10,21% @ 2,45% — cần so cùng detector/FPR. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (3,65%).*
 
 ---
 
@@ -386,9 +388,9 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
    - Không dừng lại ở việc báo cáo kết quả tái hiện âm tính, nhóm đã đào sâu và phát hiện **4 sai sót kỹ thuật** trong mã nguồn mở của bài báo IEEE TIFS 2025.
    - Làm sáng tỏ nghịch lý: mô hình One-class Autoencoder học đặc trưng header không thể đạt 99% TPR xuyên ngày nếu không rò rỉ phân phối.
 2. **Kỹ thuật phần mềm chuẩn mực:**
-   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 83 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
+   - Xây dựng hoàn chỉnh pipeline từ pcap thô (51 GB) đến phân tích đồ thị; 126 bài unit/integration test; kiểm toán 428 tiêu chí artifact.
 3. **Đóng góp giải pháp mới (P1):**
-   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,43%), TPR 16,92%, APD 7,57 gói (giảm 5,4%). Fisher giảm APD còn 5,90 gói nhưng FPR 17,73% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
+   - Đưa ra khung Conformal Prediction + Sequential Early-Exit; Bonferroni α=0,05 kiểm soát FPR (3,64%), TPR 8,95%, APD 7,75 gói (giảm 3,1%). Fisher giảm APD còn 6,24 gói nhưng FPR 18,86% nên chỉ là exploratory; tại FPR=1%, P1 chưa vượt M1.
 
 ---
 

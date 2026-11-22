@@ -54,6 +54,7 @@
 | Graph artifact | `.npz` + `day` cho từng edge | `flow_id` chỉ unique trong ngày; đã thêm `day` |
 | P1 calibration | 40% của `train2` = 800 flow | 20% = 400 flow không đủ để Bonferroni α=0,05 alert; Fisher chỉ exploratory |
 | Test | Không commit pcap; commit code/config/report | `data/`, `experiments/`, `*.pt`, `*.npy` bị ignore |
+| Protocol `P_paper` | Flow = dòng CSV CICFlowMeter, test chọn đúng Table VII, zero-pad flow ngắn | §2.8; `T`/`R`/`T_fixed` giữ nguyên, không trộn checkpoint |
 
 ---
 
@@ -162,13 +163,13 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 | p | TPR | FPR | AUROC |
 |---|---:|---:|---:|
-| 2 | 8,58% | 5,90% | 0,551 |
-| 3 | 7,26% | 3,45% | 0,571 |
-| 4 | 11,70% | 3,62% | 0,625 |
-| 5 | 8,83% | 2,87% | 0,712 |
-| 6 | 6,49% | 2,92% | 0,794 |
-| 7 | 13,53% | 3,13% | 0,811 |
-| 8 | 11,36% | 2,47% | 0,668 |
+| 2 | 3,30% | 2,89% | 0,505 |
+| 3 | 4,18% | 2,80% | 0,504 |
+| 4 | 8,56% | 2,94% | 0,578 |
+| 5 | 6,31% | 2,62% | 0,678 |
+| 6 | 14,93% | 2,29% | 0,835 |
+| 7 | 6,90% | 2,55% | 0,711 |
+| 8 | 4,18% | 2,79% | 0,594 |
 
 **Chẩn đoán:** RandomForest supervised trên **cùng edge features** (cùng ngày/phiên) đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972); nhưng **cross-day/open-class** (train Tue/Wed → test Thu/Fri) chỉ **18,1%** ở FPR 6,7% (AUROC 0,924). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; chưa tái hiện 99% của paper. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
 
@@ -176,11 +177,11 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 
 | Phương pháp | TPR | FPR | AUROC | TPR@FPR=1% |
 |---|---:|---:|---:|---:|
-| M1 GTAE ensemble tie | 11,36% | 2,47% | 0,668 | 9,64% |
+| M1 GTAE ensemble tie | 4,18% | 2,79% | 0,594 | 3,65% |
 | B0 raw vector ensemble tie | 0,50% | 1,22% | 0,698 | 2,13% |
 | B1 MLP-AE ensemble tie | 6,29% | 2,29% | 0,595 | 6,95% |
-| P1 Bonferroni α=0,05 | 16,92% | 3,43% | 0,656 | 0,00% |
-| P1 Bonferroni α=0,10 | 23,47% | 6,18% | 0,656 | 0,00% |
+| P1 Bonferroni α=0,05 | 8,95% | 3,64% | 0,662 | 0,00% |
+| P1 Bonferroni α=0,10 | 14,11% | 5,78% | 0,662 | 0,00% |
 | P1 Fisher α=0,05 | 47,67% | 17,73% | 0,646 | 6,07% |
 
 **A3 reconstruction-error (p=8, mean 3 seed):** TPR **23,65%** @ FPR **4,17%**, AUROC **0,676**; p=2/4 yếu hơn M1. Chi tiết: [`reports/ablation.md`](../reports/ablation.md).
@@ -188,6 +189,37 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm soát FPR và tăng TPR so với M1 ở vùng FPR ~3–4%, nhưng **chưa vượt M1 tại FPR=1%**; Fisher có TPR cao nhưng FPR không kiểm soát. Chi tiết sinh tự động: [`reports/P1.md`](../reports/P1.md).
 
 **Quyết định:** giữ kết quả trung thực; ưu tiên ablation/B2/A3 nếu còn thời gian; không tinh chỉnh để chạy đua con số paper.
+
+### 2.8 Paper-parity — dựng lại tập test theo Table II/VII (`P_paper`)
+
+- [x] `src/cic_graph.py`: dùng **dòng CSV CICFlowMeter** làm định nghĩa flow (đúng thứ paper đếm edge), chọn đúng số lượng từng lớp theo Table VII, **zero-pad** flow ngắn thay vì loại bỏ.
+- [x] `python scripts/build_paper_graphs.py --ps 8` (đọc lại 51 GB pcap, ~12 phút): `train1` 5.000 edge/7.178 node, `train2` 2.000/3.105 (paper 7.023/3.106), `test` **30.041** edge/22.328 node.
+- [x] `scripts/check_paper_counts.py`: 11/11 lớp đạt đúng target khả dĩ; **Heartbleed 11/1.468** và **Infiltration 34/1.764** là `csv_pool_exhausted` (CSV chỉ có 11 và 36 dòng flow TCP) → paper không tái lập được hai lớp này từ artefact công khai.
+- [x] Train p=8 × 3 seed (`experiments/P_paper`, CPU ~2 phút/seed; kernel `kaggle/paper_parity` giữ cho bản GPU).
+- [x] `scripts/eval_paper_parity.py --protocols P_paper T --diagnostics --write-report` → `results/paper_parity/*.csv`, `reports/paper_parity.md`.
+
+| Thiết lập (p=8, mean 3 seed) | TPR @ FPR 6,56% matched | TPR @ FPR 1% | AUROC |
+|---|---:|---:|---:|
+| Paper Table VI | **99,04%** | — | — |
+| `P_paper` + tie/strict/**or** | **3,25%** | 1,39% | 0,478 |
+| `P_paper` + INNE | 24,23% | 10,74% | 0,621 |
+| `T` sạch + tie (cùng pipeline) | 11,54% | 2,79% | 0,594 |
+
+**Kết luận:** khớp thành phần test + grid contamination + luật OR **không** tạo ra 99%. Chẩn đoán zero-pad cho thấy các edge **đủ 8 gói** (DDoS/DoS Hulk/GoldenEye, 17.018 edge) có AUROC chỉ 0,38–0,55 theo seed, còn phần pad lại dễ tách hơn (0,63–0,91): lớp tấn công chủ lực mới là phần không phân tách được. Khoảng cách nằm ở mô hình/điểm vận hành, không phải ở cách dựng dữ liệu.
+
+
+### 2.9 A5 — Header hygiene (bỏ TTL + 2 checksum)
+
+- [x] `src/packet_encoder.py`: `HYGIENE_POSITIONS = (6, 7, 8, 21, 22)` = TTL (IP off 8), IP checksum (10–11), TCP checksum (16–17) trong 25 byte giữ lại; `apply_hygiene` zero đúng 5 byte/gói (cả hai nửa fwd/bwd) — tương đương encode lại từ byte 0.
+- [x] `scripts/eval_hygiene.py`: mask graph → **train lại** p8 × 3 seed (`experiments/T_hygiene`, CPU ~2 phút/seed) → eval cùng recipe (`results/A5_hygiene.csv`, `results/A5/A5_p8_seed*.json`).
+- [x] `tests/test_hygiene.py` (5 test): mask đúng vị trí TTL/checksum, zero đúng số byte, khớp encode-từ-byte-0.
+
+| p8, mean 3 seed | TPR | FPR | AUROC | TPR@FPR=1% (calib) |
+|---|---:|---:|---:|---:|
+| M1 (có TTL/checksum) | 4,18% | 2,79% | 0,594 | 3,65% |
+| **A5 (bỏ TTL/checksum)** | 2,83% | 2,33% | **0,675** | **3,77%** |
+
+**Kết luận:** giả thuyết "shortcut checksum/IP-port" bị **bác bỏ bằng số đo**: bỏ 3 byte phụ thuộc địa chỉ/đường đi **không** làm mất khả năng phân biệt (AUROC còn tăng 0,594 → 0,675; TPR@1% 3,65% → 3,77%). TPR ở ngưỡng riêng giảm (4,18 → 2,83) chỉ vì ngưỡng contamination dời theo, FPR cũng giảm (2,79 → 2,33). Vì vậy phần tín hiệu ít ỏi còn lại **không** đến từ rò rỉ định danh, mà từ biểu diễn/one-class AE.
 
 ---
 
@@ -325,6 +357,7 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 | R7 | Leakage kiểm tra mới ở mức synthetic + audit artifact | Khó phát hiện lỗi mới | `tests/test_leakage.py` + audit real artifact (428 checks) |
 | R8 | Code chưa commit/tag đầy đủ | Mất lịch sử/khó chấm | A4 đã commit; H7 còn tag + AI disclosure |
 | R9 | One-class AE + detector không tách attack (TPR 7–15% ở FPR 2–6%) | Không tái hiện 99% của paper | Đã thử full-graph/large-subgraph/K_max/PE/bottleneck; xem `REPRO_AUDIT.md`; chốt báo cáo partial + RF same-session/cross-day |
+| R10 | Paper Table VII không tái lập được: CSV chỉ có 11 dòng Heartbleed và 36 dòng Infiltration | `P_paper` test 30.041/33.228 edge | Ghi rõ `csv_pool_exhausted` trong `results/P_paper_counts.csv`; không tự sinh dòng |
 
 ---
 
@@ -355,6 +388,14 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 .venv/bin/python scripts/audit_artifacts.py
 .venv/bin/python scripts/make_qa_report.py
 sha256sum -c data/raw/SHA256SUMS
+
+# Paper-parity P_paper (đọc lại toàn bộ 51 GB pcap, ~12 phút)
+.venv/bin/python scripts/build_paper_graphs.py --out data/graphs/P_paper --ps 8 --seed 0
+.venv/bin/python scripts/check_paper_counts.py --graphs data/graphs/P_paper --p 8
+.venv/bin/python scripts/train_all.py --graphs data/graphs/P_paper --out experiments/P_paper \
+  --ps 8 --seeds 0 1 2 --epochs 100 --patience 100 --device cpu --resume
+.venv/bin/python scripts/eval_paper_parity.py --protocols P_paper T --ps 8 --seeds 0 1 2 \
+  --out results/paper_parity --device cpu --write-report --diagnostics
 
 # Parse một ngày
 .venv/bin/python -m src.parse_pcap \
@@ -387,11 +428,12 @@ sha256sum -c data/raw/SHA256SUMS
 ## 7. Việc còn chờ GVHD xác nhận
 
 1. Scope MUST + SHOULD + MAY, bỏ ACI-IoT-2023.
-2. Protocol **T** là kết quả chính, R chỉ để so paper.
+2. Kết quả chính = **`T` (sạch) + `P_paper` (paper-parity)**; `R` chỉ để so paper. Nay có 4 protocol nên cần chốt cái nào dùng để chấm.
 3. Được dùng nhãn sửa Engelen cho eval phụ.
-4. Định nghĩa “real-time”: báo cả µs/gói và ms/flow end-to-end.
+4. Định nghĩa “real-time”: báo cả µs/gói và ms/flow end-to-end — **hiện chưa có artifact latency** trong `results/`; nếu GVHD yêu cầu thì phải bổ sung phép đo.
 5. P1 (calibrated fusion + early exit) đủ tiêu chí “cải tiến phương pháp” hay cần thay đổi kiến trúc.
-6. Có cần gửi email xin siêu tham số còn thiếu từ tác giả không.
+
+**Đã quyết — không xin siêu tham số từ tác giả.** Paper không công bố 5 điểm (`k` của LapPE, hidden `d`, `K_max`, sampler, định nghĩa epoch, tập calibration). Thay vì chờ phản hồi, các điểm này được ghi rõ là **giả định** ở [`REPRO_AUDIT.md`](REPRO_AUDIT.md) §1 và đã kiểm chứng độ nhạy ở §4: bỏ PE (A2), `K_max=64`, full-graph, subgraph 1.000 cạnh, bottleneck 16/64/256, protocol `R` — **không cấu hình nào** đưa TPR lên gần paper, nên kết luận không phụ thuộc các siêu tham số chưa biết.
 
 ---
 

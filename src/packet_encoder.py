@@ -77,3 +77,42 @@ def encode_edge(
         raise ValueError(f"flow has {len(packets)} packets, need at least {p}")
     blocks = [pack_direction(normalize(kept), direction) for kept, direction in packets[:p]]
     return np.concatenate(blocks)
+
+
+# --- A5 header hygiene -------------------------------------------------------
+# Of the 25 kept bytes, three depend on the network path or on the addresses
+# (hence ports) rather than on the flow's behaviour, so an anomaly detector can
+# learn an identity shortcut from them:
+#   index 6      = IP TTL                (depends on the route/host)
+#   indices 7,8  = IP header checksum    (involves both IP addresses)
+#   indices 21,22= TCP checksum          (involves both ports + payload)
+# A5 zeroes exactly these and retrains, to measure how much of the apparent
+# separability comes from the shortcut instead of the header pattern.
+HYGIENE_POSITIONS = (6, 7, 8, 21, 22)
+
+
+def hygiene_mask(p: int) -> NDArray[np.bool_]:
+    """Boolean mask over a ``(50 * p,)`` edge feature selecting A5-zeroed bytes."""
+    if p < 1:
+        raise ValueError(f"p must be >= 1, got {p}")
+    mask = np.zeros(BLOCK_DIM * p, dtype=bool)
+    for block in range(p):
+        base = block * BLOCK_DIM
+        for position in HYGIENE_POSITIONS:
+            mask[base + position] = True
+            mask[base + KEPT_BYTES + position] = True
+    return mask
+
+
+def apply_hygiene(x: NDArray[np.float32], p: int) -> NDArray[np.float32]:
+    """Zero the TTL/checksum bytes of an ``[E, 50 * p]`` edge-feature matrix.
+
+    Zeroing the normalised value is exactly equivalent to encoding packets whose
+    raw bytes were already zero there, so no re-parsing is needed.
+    """
+    x = np.asarray(x)
+    if x.ndim != 2 or x.shape[1] != BLOCK_DIM * p:
+        raise ValueError(f"expected [E, {BLOCK_DIM * p}], got {x.shape}")
+    out = x.astype(np.float32, copy=True)
+    out[:, hygiene_mask(p)] = 0.0
+    return out

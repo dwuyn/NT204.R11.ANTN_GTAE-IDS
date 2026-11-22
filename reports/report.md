@@ -1,5 +1,9 @@
 # BÁO CÁO NGHIÊN CỨU ĐỒ ÁN MÔN HỌC
 ## HỆ THỐNG PHÁT HIỆN XÂM NHẬP MẠNG THỜI GIAN THỰC DỰA TRÊN ĐỒ THỊ BIẾN ĐỔI TỰ MÃ HÓA (GTAE-IDS)
+
+> **Số liệu đã đồng bộ với CSV chuẩn (2026-11-21; retrain 2026-11-16 + đo bổ sung).**
+> Toàn bộ checkpoint đã được huấn luyện lại từ đầu (recipe: 100 epoch, `--patience 100`, CPU) và mọi CSV/report sinh tự động đã được tái tạo. Nguồn chuẩn hiện tại: `results/M1_summary.csv`, `results/P1_summary.csv`, `results/paper_parity/`, `results/ablation.csv`, `results/latency_summary.json`, `results/engelen_*.csv`; diễn giải: `docs/DECISIONS.md`, `reports/ablation.md`, `reports/P1.md`, `reports/latency.md`.
+> Các bảng thủ công dưới đây đã được cập nhật theo `results/*.csv`; nếu lệch, CSV là nguồn chuẩn.
 ### TÁI HIỆN ĐỘC LẬP, PHẢN BIỆN MÃ NGUỒN GỐC VÀ ĐỀ XUẤT CẢI TIẾN P1 (CONFORMAL EARLY-EXIT)
 
 ---
@@ -14,7 +18,7 @@
 
 ## TÓM TẮT ĐỒ ÁN (ABSTRACT)
 
-Nghiên cứu này thực hiện quy trình tái hiện độc lập toàn diện và phản biện học thuật đối với khung làm việc **GTAE-IDS** (IEEE TIFS 2025) — một mô hình học không giám sát biểu diễn cấu trúc đồ thị luồng mạng cấp độ gói tin để phát hiện tấn công zero-day thời gian thực. Bằng việc xây dựng lại toàn bộ pipeline kỹ thuật sạch từ 51 GB file pcap thô của bộ dữ liệu chuẩn CIC-IDS2017 với 83 bài kiểm thử tự động, nhóm nghiên cứu phát hiện kết quả công bố của bài báo (**TPR 99,04% ở FPR 6,56%**) **không thể tái lập trong môi trường IDS thời gian thực, không rò rỉ dữ liệu** (kết quả tái hiện sạch Protocol T đạt TPR 11,4% ở FPR 2,5%, AUROC 0,668).
+Nghiên cứu này thực hiện quy trình tái hiện độc lập toàn diện và phản biện học thuật đối với khung làm việc **GTAE-IDS** (IEEE TIFS 2025) — một mô hình học không giám sát biểu diễn cấu trúc đồ thị luồng mạng cấp độ gói tin để phát hiện tấn công zero-day thời gian thực. Bằng việc xây dựng lại toàn bộ pipeline kỹ thuật sạch từ 51 GB file pcap thô của bộ dữ liệu chuẩn CIC-IDS2017 với 126 bài kiểm thử tự động, nhóm nghiên cứu phát hiện kết quả công bố của bài báo (**TPR 99,04% ở FPR 6,56%**) **không thể tái lập trong môi trường IDS thời gian thực, không rò rỉ dữ liệu** (kết quả tái hiện sạch Protocol T đạt TPR 4,18% ở FPR 2,79%, AUROC 0,594).
 
 Qua điều tra chuyên sâu và phân tích pháp chứng mã nguồn mở chính thức của tác giả (tại kho lưu trữ `jalalgh7/graph-representation-learning-for-NIDS` và `jalalgh7/robust-and-real-time-NIDS`), nhóm đã xác định được **4 nguyên nhân kỹ thuật cốt lõi** dẫn đến sự sai lệch:
 1. **Lỗi lệch nhãn gói tin (Label Row-Shift):** Lỗi logic thiếu nhánh `else` trong vòng lặp tiền xử lý khiến cột nhãn tấn công bị trượt hàng, gán nhầm vào lưu lượng bình thường đầu ngày.
@@ -22,7 +26,7 @@ Qua điều tra chuyên sâu và phân tích pháp chứng mã nguồn mở chí
 3. **Sai lệch phân chia dữ liệu:** Tác giả không huấn luyện trên ngày thứ Hai sạch (Monday benign) xuyên suốt tuần như công bố, mà huấn luyện và kiểm thử trên cùng ngày thứ Sáu (Friday 70/30 split).
 4. **Quy tắc Ensemble và ghép chỉ số:** Tác giả sử dụng luật hợp logic (OR, `votes >= 1`) thay vì đa số (Majority voting), khiến FPR thực tế trên lưu lượng bình thường tăng vọt lên **13,12%**, nhưng bài báo lại ghép chỉ số TPR của Ensemble (99,04%) với FPR của riêng thuật toán OCSVM (6,56%).
 
-Nhằm giải quyết triệt để các hạn chế của mô hình gốc, nhóm đề xuất **Proposal P1: Calibrated Conformal Fusion & Sequential Early-Exit**. P1 chuyển đổi điểm số bất thường sang conformal p-value trên tập hiệu chuẩn lành tính để kiểm soát FPR thực nghiệm, đồng thời cho phép hệ thống đưa ra quyết định cảnh báo sớm ngay từ $p=2..7$ gói tin đầu tiên mà không cần chờ đủ $p=8$. Với calibration 40% của `train2` (800 flow), Bonferroni đạt **TPR 16,92% @ FPR 3,43%** ở $\alpha=0,05$ và **23,47% @ 6,18%** ở $\alpha=0,10$; Fisher cho TPR 47,7% nhưng FPR 17,7%, nên chỉ là kết quả exploratory. Tại FPR=1%, P1 (0–6,07%) chưa vượt M1 (9,64%), nên đóng góp của P1 là operating point có kiểm soát FPR và phân tích trade-off, không phải cải thiện mọi metric.
+Nhằm giải quyết triệt để các hạn chế của mô hình gốc, nhóm đề xuất **Proposal P1: Calibrated Conformal Fusion & Sequential Early-Exit**. P1 chuyển đổi điểm số bất thường sang conformal p-value trên tập hiệu chuẩn lành tính để kiểm soát FPR thực nghiệm, đồng thời cho phép hệ thống đưa ra quyết định cảnh báo sớm ngay từ $p=2..7$ gói tin đầu tiên mà không cần chờ đủ $p=8$. Với calibration 40% của `train2` (800 flow), Bonferroni đạt **TPR 8,95% @ FPR 3,64%** ở $\alpha=0,05$ và **14,11% @ 5,78%** ở $\alpha=0,10$; Fisher cho TPR 42,5–49,3% nhưng FPR 13,6–23,0%, nên chỉ là kết quả exploratory. Tại FPR=1%, P1 Bonferroni 0% và Fisher 2,77%, chưa vượt M1 (3,65%), nên đóng góp của P1 là operating point có kiểm soát FPR và phân tích trade-off, không phải cải thiện mọi metric.
 
 ---
 
@@ -85,7 +89,7 @@ Nhóm nghiên cứu đã xây dựng lại toàn bộ pipeline mã nguồn Pytho
 
 ## CHƯƠNG 4: PHÁT HIỆN PHẢN BIỆN KHOA HỌC: MỔ XẺ MÃ NGUỒN GỐC CỦA TÁC GIẢ
 
-Khi đánh giá mô hình tái hiện sạch dưới Protocol T, nhóm ghi nhận kết quả rất thấp: TPR chỉ đạt **11,36%** ở FPR **2,47%** (AUROC 0,668) tại $p=8$, hoàn toàn mâu thuẫn với con số **99,04%** của bài báo.
+Khi đánh giá mô hình tái hiện sạch dưới Protocol T, nhóm ghi nhận kết quả rất thấp: TPR chỉ đạt **4,18%** ở FPR **2,79%** (AUROC 0,594) tại $p=8$, hoàn toàn mâu thuẫn với con số **99,04%** của bài báo.
 Nhóm đã tiến hành điều tra kỹ thuật sâu trên các kho lưu trữ mã nguồn của tác giả chính (Jalal Ghadermazi) và phát hiện **4 sai sót kỹ thuật mang tính hệ thống**:
 
 ### 4.1 Lỗi lệch nhãn gói tin do cấu trúc `if` thiếu `else` (`data_extraction/*.ipynb`)
@@ -156,13 +160,13 @@ Do cùng một môi trường mạng và cùng phiên lưu lượng, mô hình c
 | **Official Repo Code** | Disconnected Linear AE | Friday 70/30 | Union (votes $\ge 1$) | **98,74%** | **13,12%** | — |
 | **B0: Raw Vector** | PyOD Detectors (Không đồ thị) | Temporal T | Ensemble tie ($\ge 2/4$) | **0,50%** | **1,22%** | **0,698** |
 | **B1: MLP-AE** | Dense AE (Không đồ thị) | Temporal T | Ensemble tie ($\ge 2/4$) | **6,29%** | **2,29%** | **0,595** |
-| **M1: GTAE-IDS (Ours Sạch)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **11,36%** | **2,47%** | **0,668** |
+| **M1: GTAE-IDS (Ours Sạch)** | Graph Transformer AE | Temporal T (Sạch) | Ensemble tie ($\ge 2/4$) | **4,18%** | **2,79%** | **0,594** |
 | **M1 (Chạy theo luật Code)** | Graph Transformer AE | Friday same-day | Union (votes $\ge 1$) | *chưa lưu artifact* | — | — |
-| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **16,92%** | **3,43%** | **0,656** |
+| **P1: Bonferroni α=0,05** | GTAE + Conformal Fusion | Temporal T (Sạch) | $\pi_{\text{fused}} \le \alpha_p$ | **8,95%** | **3,64%** | **0,662** |
 | **Upper Bound (Supervised RF)** | Random Forest | Cross-day (Tue/Wed $\to$ Thu/Fri) | Ngưỡng xác suất | **18,1%** | **6,7%** | **0,92** |
 | **Upper Bound (Same-session RF)** | Random Forest | Same-session (Cùng ngày) | Ngưỡng xác suất | **99,4%** | **6,1%** | **0,97** |
 
-*Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector/FPR trước khi kết luận graph transformer tốt hơn. Dòng “M1 (Chạy theo luật Code)” chưa có artifact lưu nên không dùng làm kết luận. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (9,64%).*
+*Lưu ý: B0 `ensemble_tie` rất thấp; detector INNE trên raw features đạt 10,21% @ 2,45%, gần M1. Cần so cùng detector/FPR trước khi kết luận graph transformer tốt hơn. Dòng “M1 (Chạy theo luật Code)” chưa có artifact lưu nên không dùng làm kết luận. P1 Bonferroni α=0,05 có TPR@FPR=1% = 0%, thấp hơn M1 (3,65%).*
 
 ### 5.2. Ablation A3 — Reconstruction-error detector
 
@@ -170,13 +174,45 @@ A3 thay 4 detector bằng ngưỡng 99th percentile của reconstruction MSE tr�
 
 | p | M1 TPR/FPR | A3 TPR/FPR | A3 AUROC | ΔTPR (A3−M1) |
 |---:|---:|---:|---:|---:|
-| 2 | 8,58% / 5,90% | 4,58% / 3,71% | 0,436 | −4,00 pp |
-| 4 | 11,70% / 3,62% | 7,40% / 1,73% | 0,543 | −4,30 pp |
-| 8 | 11,36% / 2,47% | **23,65% / 4,17%** | 0,676 | **+12,29 pp** |
+| 2 | 3,30% / 2,89% | 6,23% / 6,31% | 0,425 | +2,93 pp |
+| 4 | 8,56% / 2,94% | 12,15% / 3,51% | 0,519 | +3,59 pp |
+| 8 | 4,18% / 2,79% | 6,01% / 2,07% | 0,649 | +1,83 pp |
 
-A3 chỉ có lợi thế rõ ở p=8, nhưng tại FPR 4,17% (cao hơn M1 2,47%); p=2/4 lại kém M1. Vì vậy không thể kết luận A3 “tốt hơn” nếu không so cùng operating point. Chi tiết sinh tự động: [`reports/ablation.md`](../reports/ablation.md).
+A3 cao hơn M1 ở cả ba p, nhưng FPR cũng cao hơn ở p=2/4 (6,31/3,51% so với 2,89/2,94%); chỉ p=8 là tăng TPR mà FPR còn thấp hơn (2,07% vs 2,79%). Vì A3 dùng ngưỡng 99th percentile cố định, cột TPR@FPR=1% của nó trùng TPR (6,23/12,15/6,01%) — không so được với M1 ở cùng FPR. Chi tiết sinh tự động: [`reports/ablation.md`](../reports/ablation.md).
 
-**A2 — bỏ LapPE (p=8):** TPR **6,21% ± 7,97%** @ FPR **2,24%**, AUROC **0,690**, TPR@1% **9,31%**. Seed variance rất lớn (0,2–15,3% TPR), nên LapPE không phải yếu tố quyết định; A2 thấp hơn M1 về TPR trung bình nhưng AUROC tương đương.
+**A2 — bỏ LapPE (p=8):** TPR **6,36%** @ FPR **1,23%**, AUROC **0,682**, TPR@1% **12,46%**. Seed variance lớn (3,79–10,62% TPR), nên LapPE không phải yếu tố quyết định; A2 cao hơn M1 về AUROC (0,682 vs 0,594) và TPR@1% (12,46% vs 3,65%).
+
+**A5 — header hygiene (bỏ TTL + 2 checksum):** zero 5/25 byte mỗi gói (TTL, IP checksum, TCP checksum) rồi **train lại** p8 × 3 seed. Kết quả: TPR 2,83% @ FPR 2,33%, **AUROC 0,675**, **TPR@FPR=1% 3,77%** — so với M1 là 4,18% / 2,79% / 0,594 / 3,65%. Tức bỏ các byte phụ thuộc địa chỉ/đường đi **không** làm giảm khả năng phân biệt (AUROC tăng, TPR@1% tăng nhẹ); TPR ở ngưỡng riêng thấp hơn vì ngưỡng contamination dời theo FPR giảm. Giả thuyết "mô hình ăn shortcut checksum/IP-port" bị bác bỏ bằng số đo. Chi tiết: `results/A5_hygiene.csv`, `reports/ablation.md`.
+
+### 5.3 Paper-parity: dựng lại tập test theo Table II/VII (`P_paper`)
+
+Nghi vấn công bằng: protocol `T` dựng test bằng parser pcap (chỉ giữ flow có ≥ p gói) nên thành phần lớp lệch xa paper — PortScan 204 so với 6.451, Heartbleed 1 so với 1.468, FTP 3.972 so với 174. Để loại trừ khả năng “kết luận âm chỉ là artefact của cách dựng test”, đề tài dựng thêm protocol `P_paper`: lấy **dòng CSV CICFlowMeter làm định nghĩa flow** (đúng thứ paper dùng để đếm edge), chọn đúng số lượng từng lớp theo Table VII, và **zero-pad** các flow ngắn thay vì loại bỏ (`src/cic_graph.py`).
+
+| tập test (p = 8) | edge | node | benign | PortScan | Heartbleed | Infiltration | DoS Hulk |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| paper Table II/VII | 33.228 | 40.744 | 5.000 | 6.451 | 1.468 | 1.764 | 5.000 |
+| **`P_paper`** | **30.041** | **22.328** | **5.000** | **6.451** | 11 | 34 | **5.000** |
+| `T` (sạch) | 30.907 | 24.030 | 5.000 | 204 | 1 | 4 | 5.000 |
+
+`train1` = 5.000 edge / 7.178 node và `train2` = 2.000 edge / 3.105 node gần như trùng paper (7.023 / 3.106) — bằng chứng paper cũng lấy benign Friday từ CSV. Hai lớp không thể đạt: CSV chỉ có **11 dòng Heartbleed** và **36 dòng Infiltration** flow TCP (parser pcap cho 1 và 4), nên 1.457 + 1.730 edge của paper là **không thể tái lập từ artefact công khai**; `scripts/check_paper_counts.py` ghi nhận `csv_pool_exhausted` thay vì tự sinh dữ liệu.
+
+Đánh giá trên `P_paper` (3 seed, grid contamination `[0,001; 0,01; 0,04; 0,05; 0,1]` như Table V, luật OR của code tác giả + strict/tie):
+
+| thiết lập | luật | TPR @ FPR 6,56% (matched) | TPR @ FPR 1% | AUROC |
+|---|---|---:|---:|---:|
+| paper Table VI | majority vote | **99,04%** | — | — |
+| `P_paper` | tie / strict / or | **3,25%** | 1,39% | 0,478 |
+| `P_paper` | INNE (detector tốt nhất) | 8,31% | 4,12% | 0,590 |
+| `T` (sạch, cùng pipeline) | tie | 11,54% | 2,79% | 0,594 |
+| `T` (sạch, cùng pipeline) | INNE | 21,21% | 4,80% | 0,578 |
+
+Ba kết luận:
+
+1. **Khớp thành phần test không tạo ra 99%.** Ở đúng điểm vận hành của paper (FPR 6,56%) và đúng luật OR của code tác giả, `P_paper` chỉ đạt 3,25% (ensemble) / 8,31% (INNE tốt nhất) — thấp hơn cả `T` (11,54%).
+2. **Zero-pad không phải nguồn “ăn may”** (chẩn đoán trong [`paper_parity.md`](paper_parity.md)): 8.023/30.041 edge test (26,7%) được pad, tập trung ở PortScan (99,9%). AUROC của các edge **đủ 8 gói** (DDoS, DoS Hulk, GoldenEye — 17.018 edge) chỉ **0,35 / 0,41 / 0,47** theo seed; phần pad lại dễ tách hơn (0,70 / 0,82 / 0,73). Nghĩa là các lớp tấn công chủ lực của paper mới là phần **không phân tách được**, không phải flow ngắn.
+3. **Khoảng cách là của mô hình/điểm vận hành, không phải của dữ liệu.** Với cùng detector, cùng grid, cùng ngưỡng matched-FPR, embedding GTAE không đạt AUROC > 0,60 trên cả hai định nghĩa flow; con số 99,04% @ 6,56% không tái lập được.
+
+Chi tiết sinh tự động: [`paper_parity.md`](paper_parity.md); số đo: `results/paper_parity/*.csv`, `results/P_paper_counts.csv`.
 
 ---
 
@@ -204,26 +240,26 @@ Chi tiết sinh tự động từ CSV: [`reports/P1.md`](../reports/P1.md).
 
 | $\alpha$ mục tiêu | Phương pháp Fusion | TPR thực đo | FPR thực đo | APD Tấn công (gói) | APD Bình thường (gói) | Tỉ lệ dừng sớm (Attack) | AUROC | TPR@FPR=1% |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| **0,01** | Fisher | 39,87% | 11,81% | 6,42 pkts | 7,44 pkts | 39,66% | 0,646 | 6,07% |
-| **0,05** | Fisher | **47,67%** | **17,73%** | **5,90 pkts** | 7,14 pkts | **47,47%** | 0,646 | 6,07% |
-| **0,10** | Fisher | 51,43% | 22,26% | 5,72 pkts | 6,92 pkts | 51,15% | 0,646 | 6,07% |
-| **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% | 0,656 | 0,00% |
-| **0,05** | Bonferroni | **16,92%** | **3,43%** | 7,57 pkts | 7,89 pkts | 15,66% | 0,656 | 0,00% |
-| **0,10** | Bonferroni | **23,47%** | **6,18%** | 7,33 pkts | 7,79 pkts | 22,24% | 0,656 | 0,00% |
+| **0,01** | Fisher | 42,46% | 13,57% | 6,44 pkts | 7,41 pkts | 41,57% | 0,64 | 2,77% |
+| **0,05** | Fisher | **47,53%** | **18,86%** | **6,24 pkts** | 7,23 pkts | **46,98%** | 0,64 | 2,77% |
+| **0,10** | Fisher | 49,33% | 22,96% | 6,16 pkts | 7,08 pkts | 48,58% | 0,64 | 2,77% |
+| **0,01** | Bonferroni | 0,00% | 0,00% | 8,00 pkts | 8,00 pkts | 0,00% | 0,66 | 0,00% |
+| **0,05** | Bonferroni | **8,95%** | **3,64%** | 7,75 pkts | 7,91 pkts | 7,70% | 0,66 | 0,00% |
+| **0,10** | Bonferroni | **14,11%** | **5,78%** | 7,56 pkts | 7,84 pkts | 13,22% | 0,66 | 0,00% |
 
 *Calibration: 40% của `train2` (800 flow); detector fit trên 1.200 flow còn lại. Số liệu mean 3 seed trên T_fixed. Score cho AUROC/TPR@FPR=1% là $1-\min_p$ qua các p.*
 
 **Đánh giá:**
-1. **Bonferroni kiểm soát FPR:** Tại $\alpha = 0,05$, FPR thực đo là **3,43%** ($\le 5\%$); tại $\alpha=0,10$ là **6,18%** ($\le 10\%$). Đây là cấu hình dùng được cho claim kiểm soát FPR theo conformal, với giả định calibration và benign test exchangeable.
-2. **Fisher không kiểm soát FPR:** Fisher cho TPR 39,9–51,4% nhưng FPR 11,8–22,3%, vượt xa $\alpha$. Nguyên nhân: Fisher giả định 4 p-value độc lập, trong khi 4 detector tương quan mạnh; kết quả này chỉ nên đọc như exploratory.
+1. **Bonferroni kiểm soát FPR:** Tại $\alpha = 0,05$, FPR thực đo là **3,64%** ($\le 5\%$); tại $\alpha=0,10$ là **5,78%** ($\le 10\%$). Đây là cấu hình dùng được cho claim kiểm soát FPR theo conformal, với giả định calibration và benign test exchangeable.
+2. **Fisher không kiểm soát FPR:** Fisher cho TPR 42,5–49,3% nhưng FPR 13,6–23,0%, vượt xa $\alpha$. Nguyên nhân: Fisher giả định 4 p-value độc lập, trong khi 4 detector tương quan mạnh; kết quả này chỉ nên đọc như exploratory.
 3. **Calibration floor:** Với 400 calibration flow (20%), Bonferroni tại $\alpha=0,05$ không thể alert vì $4/401=0,009975 > 0,05/7$. Tăng calibration lên 800 flow (40%) đưa sàn xuống $4/801=0,004994$, mở được operating point $\alpha=0,05$; $\alpha=0,01$ vẫn không thể alert.
-4. **Early-exit:** Bonferroni $\alpha=0,05$ phát hiện sớm 15,66% attack, APD 7,57 gói (giảm 5,4% so với 8); $\alpha=0,10$ phát hiện sớm 22,24%, APD 7,33 gói. Fisher giảm APD mạnh hơn (5,90 gói ở $\alpha=0,05$) nhưng không dùng được vì FPR cao.
-5. **Giới hạn quan trọng:** Ở operating point FPR=1%, Bonferroni không alert (TPR 0%) và Fisher chỉ đạt 6,07%, đều thấp hơn M1 (9,64%). Vì vậy P1 chưa vượt M1 ở vùng FPR thấp; đóng góp chính là một operating point có kiểm soát FPR và phân tích trade-off/calibration, không phải cải thiện tuyệt đối mọi metric.
+4. **Early-exit:** Bonferroni $\alpha=0,05$ phát hiện sớm 7,70% attack, APD 7,75 gói (giảm 3,1% so với 8); $\alpha=0,10$ phát hiện sớm 13,22%, APD 7,56 gói. Fisher giảm APD mạnh hơn (6,24 gói ở $\alpha=0,05$) nhưng không dùng được vì FPR cao.
+5. **Giới hạn quan trọng:** Ở operating point FPR=1%, Bonferroni không alert (TPR 0%) và Fisher chỉ đạt 2,77%, đều thấp hơn M1 (3,65%). Vì vậy P1 chưa vượt M1 ở vùng FPR thấp; đóng góp chính là một operating point có kiểm soát FPR và phân tích trade-off/calibration, không phải cải thiện tuyệt đối mọi metric.
 
 ---
 
 ## CHƯƠNG 7: KẾT LUẬN VÀ ĐÓNG GÓP HỌC THUẬT
 
 1. **Tính trung thực khoa học:** Đồ án không che giấu kết quả âm khi tái hiện, mà đi sâu tìm hiểu bản chất và cung cấp bằng chứng mổ xẻ mã nguồn thuyết phục, giải trình tường tận lý do bài báo IEEE TIFS 2025 công bố con số 99% không tưởng.
-2. **Kỹ thuật công nghệ vững chắc:** Xây dựng hệ thống pipeline hoàn chỉnh, xử lý 51 GB pcap với 83 bài kiểm thử tự động, kiểm toán 428 tiêu chí không rò rỉ dữ liệu.
+2. **Kỹ thuật công nghệ vững chắc:** Xây dựng hệ thống pipeline hoàn chỉnh, xử lý 51 GB pcap với 126 bài kiểm thử tự động, kiểm toán 428 tiêu chí không rò rỉ dữ liệu.
 3. **Đóng góp giải pháp thực tiễn (P1):** Đề xuất và đánh giá trung thực Early-Exit kết hợp Conformal Prediction. Bonferroni với 800 calibration flow kiểm soát FPR (3,43% @ α=0,05; 6,18% @ α=0,10) và tăng TPR so với M1 ở vùng FPR 3–6%, nhưng chưa vượt M1 tại FPR=1%; Fisher có TPR cao hơn nhưng FPR 17,7–22,3% nên chỉ là exploratory. Đóng góp là phân tích trade-off FPR/TPR/APD và giới hạn calibration, không phải một cải tiến thắng mọi metric.
