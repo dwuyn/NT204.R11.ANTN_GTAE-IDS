@@ -183,7 +183,7 @@ Hai lớp **không thể** tái lập từ artefact công khai: CSV chỉ có 11
 **Diễn giải:**
 1. Khớp thành phần tập test **không** tạo ra con số 99%.
 2. Zero-pad không phải nguồn "ăn may": các cạnh đủ 8 gói (DDoS, Hulk, GoldenEye; 17.018 cạnh) có AUROC 0,35 / 0,41 / 0,47 theo seed. Tức là các lớp tấn công chủ lực của bài báo lại chính là phần không tách được.
-3. AUROC < 0,5 nghĩa là các luồng tấn công trông "bình thường" hơn benign. Giải thích khả dĩ: benign Friday của `P_paper` có nhiều luồng ngắn bị zero-pad, nên khác phân phối với train. Đây là điểm cần phân tích thêm (xem [`paper_parity.md`](paper_parity.md)).
+3. AUROC < 0,5 nghĩa là các luồng tấn công trông "bình thường" hơn benign. Giải thích khả dĩ: benign Friday của `P_paper` có nhiều luồng ngắn bị zero-pad, nên khác phân phối với train. Đây là điểm cần phân tích thêm (xem `paper_parity.md`).
 
 ### 4.4 Chuyển miền: CIC-IDS2018 và ACI-IoT-2023
 Bài báo chỉ báo TPR trên tập test **toàn tấn công**. Nhóm đo lại có thêm benign để tính được FPR (cùng 25 byte, cùng 4 detector, p = 8):
@@ -215,7 +215,7 @@ Kế hoạch (`docs/GTAE-IDS_Research_docs.md` §0) đặt bốn tiêu chí thà
 
 ## CHƯƠNG 5: ĐỐI CHIẾU BÀI BÁO VỚI MÃ NGUỒN CÔNG KHAI CỦA TÁC GIẢ
 
-Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kết quả) và `jalalgh7/robust-and-real-time-NIDS` (trích xuất gói tin; `graph_generation/*.ipynb` của GTAE đọc trực tiếp file `.pkl` do repo này sinh ra). Chi tiết, kèm số cell và trích đoạn code: [`docs/REPRO_AUDIT.md`](../docs/REPRO_AUDIT.md) §5.
+Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kết quả) và `jalalgh7/robust-and-real-time-NIDS` (trích xuất gói tin; `graph_generation/*.ipynb` của GTAE đọc trực tiếp file `.pkl` do repo này sinh ra). Chi tiết, kèm số cell và trích đoạn code: `docs/REPRO_AUDIT.md` §5.
 
 | # | Phát hiện | Mức độ kiểm chứng |
 |---|---|---|
@@ -233,7 +233,7 @@ Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kế
 
 ## CHƯƠNG 6: SO SÁNH VỚI CÁC NGHIÊN CỨU LIÊN QUAN VÀ ĐÁNH GIÁ ƯU/NHƯỢC ĐIỂM
 
-Chi tiết 12 bài liên quan: [`docs/GTAE-IDS_Research_docs.md`](../docs/GTAE-IDS_Research_docs.md) §3. Bảng số có ghi nguồn: [`related_work.md`](related_work.md).
+Chi tiết 12 bài liên quan: `docs/GTAE-IDS_Research_docs.md` §3. Bảng số có ghi nguồn: `related_work.md`.
 
 ### 6.1 Định vị GTAE-IDS giữa các hướng tiếp cận
 
@@ -250,7 +250,7 @@ Chi tiết 12 bài liên quan: [`docs/GTAE-IDS_Research_docs.md`](../docs/GTAE-I
 **Nhận xét:** GTAE là bài duy nhất trong nhóm kết hợp cả ba yếu tố (packet-level, đồ thị, không giám sát). Đây là điểm mới thật sự của bài báo. Đổi lại, nó không có baseline nào được đo trong cùng điều kiện: Table XI–XIII của bài báo so với các phương pháp supervised hoặc flow-based, trên tập chia cân bằng.
 
 ### 6.2 So sánh cùng protocol (nhóm tự cài đặt và đo)
-Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 8, mean ± std 3 seed ([`seed_stats.md`](seed_stats.md)):
+Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 8, mean ± std 3 seed (`seed_stats.md`):
 
 | Phương pháp | Đại diện cho | TPR | FPR | AUROC | TPR@FPR=1%* |
 |---|---|---:|---:|---:|---:|
@@ -262,7 +262,7 @@ Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 
 | B0, chỉ HBOS | — | 0,00% | 1,66% | **0,810 ± 0,000** | 0,00% |
 | A3 GTAE + reconstruction MSE | mục tiêu của [10] | 6,01 ± 9,69% | 2,07 ± 1,34% | 0,649 ± 0,012 | 6,01% |
 
-\* Ngưỡng là quantile 99% của điểm trên `train2` (benign Monday). FPR thực trên benign test được ghi trong [`seed_stats.md`](seed_stats.md) và thường > 1% do dịch chuyển phân phối.
+\* Ngưỡng là quantile 99% của điểm trên `train2` (benign Monday). FPR thực trên benign test được ghi trong `seed_stats.md` và thường > 1% do dịch chuyển phân phối.
 
 ### 6.3 Các tuyên bố của bài báo, đối chiếu bằng số đo
 
@@ -295,7 +295,7 @@ Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 
 | Nhược điểm | Bằng chứng |
 |---|---|
 | Embedding tách benign/attack kém khi có dịch chuyển phân phối theo thời gian (AUROC ~0,6) | §4.1 |
-| Huấn luyện không ổn định theo seed (AUROC 0,495–0,705) | [`seed_stats.md`](seed_stats.md) |
+| Huấn luyện không ổn định theo seed (AUROC 0,495–0,705) | `seed_stats.md` |
 | Attention và LapPE không mang lại lợi ích; còn làm kém và bất ổn hơn | B2, A2 (§6.2) |
 | Đồ thị tĩnh theo cửa sổ: phải dựng lại line graph, nên không đạt thời gian thực | §4.5 |
 | Ensemble 4 detector bằng phiếu cứng: không kiểm soát được FPR | §4.3; F1, F2 |
@@ -349,7 +349,7 @@ Từ Chương 4–6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác
 - Đến p = 8 mà chưa báo động thì kết luận benign.
 - Dùng 800 flow calibration (40% `train2`). Với 400 flow, p-value nhỏ nhất là $4/401 > 0{,}05/7$, nên Bonferroni ở α = 0,05 **không bao giờ** báo động được.
 
-**7.3.3 Kết quả (T_fixed, mean ± std 3 seed; [`P1.md`](P1.md))**
+**7.3.3 Kết quả (T_fixed, mean ± std 3 seed; `P1.md`)**
 
 | α | Fusion | TPR | FPR thực đo | Số gói TB đến quyết định (attack) | Tỉ lệ dừng sớm (attack) | AUROC |
 |---|---|---:|---:|---:|---:|---:|

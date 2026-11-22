@@ -27,7 +27,7 @@ OUT="${OUT:-$ROOT/reports/GTAE-IDS_NhomB_BaoCao.pdf}"
   -V linkcolor=blue \
   -V urlcolor=blue \
   -V lang=vi \
-  --metadata title="GTAE-IDS — Báo cáo đồ án Nhóm B" \
-  --metadata author="Nhóm B — NT204.R11.ANTN"
+  --metadata title="GTAE-IDS — Báo cáo đồ án" \
+  --metadata author="NT204.R11.ANTN"
 
 echo "wrote $OUT"
