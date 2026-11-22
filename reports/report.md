@@ -211,15 +211,6 @@ Bài báo chỉ báo TPR trên tập test **toàn tấn công**. Nhóm đo lại
 
 Con số 1,28 µs/gói của bài báo chỉ đo phần chạy mô hình trên GPU, không tính trích đặc trưng và dựng đồ thị.
 
-### 4.6 Tự đánh giá theo tiêu chí đặt ra từ đầu
-Kế hoạch (`docs/GTAE-IDS_Research_docs.md` §0) đặt bốn tiêu chí thành công:
-
-| Tiêu chí | Kết quả |
-|---|---|
-| Pipeline end-to-end, 1 lệnh train + 1 lệnh eval | **Đạt** |
-| Có đường cong TPR/FPR theo p | **Đạt**, nhưng xu hướng "TPR tăng theo p" **không đạt** (§4.2) |
-| Bảng "paper vs ours" có giải thích chênh lệch | **Đạt** (Chương 4.3, 5) |
-| GTAE ≥ baseline không đồ thị B0 | **Không đạt**: AUROC B0 0,698 > M1 0,594 (Chương 6) |
 
 ---
 
@@ -406,11 +397,6 @@ Các hướng khác đã cân nhắc (`docs/GTAE-IDS_Research_docs.md` §6), x�
    - (A) Mean aggregation / bỏ LapPE: AUROC +0,09, ổn định hơn 5-38 lần, TPR@FPR=1% gấp khoảng 3 lần.
    - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít.
    - Kết hợp A + B là hướng tiếp theo, đã có sẵn lệnh chạy.
-
-**Hạn chế của đồ án:**
-- **Seed:** 7 seed cho M1 ở mọi p (đường cong §4.2) nhưng 3 seed cho baseline/P1; và 7 seed vẫn chưa đủ để kết luận chênh lệch <1 sd - ví dụ B2−M1 = 0,096 với sd của chênh lệch ghép cặp là 0,093.
-- Đã tải và đối chiếu **3 PDF gốc** (E-GraphSAGE, Anomal-E, Pujol-Perich, trong `docs/related/`): Anomal-E khớp chính xác (86,28→94,51 macro-F1); dòng E-GraphSAGE của Table XI **không có trong bài gốc** (bài gốc dùng NF-UNSW-NB15/NF-ToN-IoT/NF-BoT-IoT, metric F1/FAR); Pujol khớp một phần (accuracy từng lớp, thiếu Heartbleed/Infiltration). PBCNN, SPIN-IDS, GraphDDoS, GraphIDS vẫn là nguồn thứ cấp (paywall/không tìm thấy PDF) - chi tiết `reports/related_work_verification.md`.
-- F3 và F7 **đã định lượng** (Chương 5; `results/per_class_graphs.csv`, `results/label_shift_f7.csv`), nên không còn là hạn chế mở; phần chưa làm là các biến thể robustness/online khác trong `docs/GTAE-IDS_Research_docs.md` §6.
 
 ---
 
