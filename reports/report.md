@@ -411,6 +411,7 @@ Từ Chương 4-6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác n
 |---|---:|---:|---:|
 | AUROC | 0,594 ± 0,106 | **0,682 ± 0,003** | **0,689 ± 0,021** |
 | TPR @ ngưỡng FPR=1% | 3,65 ± 4,48% | **12,46 ± 0,86%** | **11,30 ± 10,52%** |
+| TPR @ FPR 6,56% (quantile benign test) | 11,54% | **15,53%** | **16,27%** (11,0-25,8 theo seed) |
 | TPR / FPR (tie) | 4,18% / 2,79% | 6,36% / 1,23% | 9,78% / 1,81% |
 | Độ lệch chuẩn AUROC giữa seed | 0,106 | 0,003 (giảm ~35 lần) | 0,021 (giảm ~5 lần) |
 
@@ -451,16 +452,25 @@ Từ Chương 4-6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác n
 5. **Chi phí:** cần chạy 7 mô hình (mỗi p một mô hình); early-exit không giảm chi phí dựng đồ thị (§4.5).
 
 ### 7.4 Kết hợp A + B và các bước tiếp theo
-Đề xuất B chỉ thay tầng quyết định nên bị giới hạn bởi chất lượng embedding (AUROC ~0,6). Kết hợp với Đề xuất A là bước hợp lý tiếp theo. Script đã hỗ trợ sẵn checkpoint E-GraphSAGE (bộ nạp checkpoint đọc `arch_name`). P1 cũng đã ghi thêm TPR tại FPR 3% và 5% để so với M1 **ở cùng FPR** (kết quả: Bonferroni 1,82% @ 3% và 10,17% @ 5%; M1 đạt 4,18% ở FPR riêng 2,79% và 3,65% ở FPR=1% - nên ngay cả khi nới FPR lên 3-5%, P1 vẫn chưa vượt M1 ở vùng FPR thấp):
+Đề xuất B chỉ thay tầng quyết định nên bị giới hạn bởi chất lượng embedding (AUROC ~0,6). Kết
+hợp với Đề xuất A là bước hợp lý tiếp theo, nay đã đo: P1 chạy trên encoder B2 với các bước
+p = 2, 4, 8, đối chứng P1 trên GTAE cùng bước (`results/P1_egsage/`, `results/P1_p248/`):
 
-```bash
-# P1 trên encoder B2 (đã có checkpoint p = 2, 4, 8)
-PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only \
-  --models experiments/T_egsage --p1-ps 2 4 8 --results results/P1_egsage
-# Đối chứng: P1 trên GTAE với cùng p = 2, 4, 8
-PYTHONPATH=. python scripts/eval_baselines_p1.py --p1-only \
-  --models experiments/T --p1-ps 2 4 8 --results results/P1_p248
-```
+| Cấu hình (3 bước p=2/4/8) | α | TPR | FPR | APD attack | Early-exit | AUROC fusion | TPR@FPR=1% |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| M1 + P1 | 0,05 | 12,13% | 5,17% | 7,57 | 10,4% | 0,604 | 0,00% |
+| M1 + P1 | 0,10 | 19,40% | 7,53% | 7,34 | 15,9% | 0,604 | 0,00% |
+| **B2 + P1** | 0,05 | **14,49%** | **4,76%** | 7,72 | 5,9% | **0,662** | 0,00% |
+| **B2 + P1** | 0,10 | **18,52%** | 6,93% | 7,59 | 8,4% | **0,662** | 0,00% |
+
+Bảng này dùng 3 bước (2, 4, 8), khác bảng 7 bước ở §7.3; ít bước hơn nên ngưỡng Bonferroni
+dễ đạt hơn, vì vậy chỉ so trong cùng bảng.
+
+**Đánh giá A+B:** đây là cấu hình sạch tốt nhất ở vùng FPR trung bình (14,5% @ 4,8%; 18,5%
+@ 6,9%), nhưng so với B đơn lẻ (M1+P1) chỉ hơn 2,4 pp ở α=0,05 và gần hòa ở α=0,10 - lợi thế
+encoder bị fusion conformal san phẳng. Tại FPR=1% cả hai đều 0%, thấp hơn M1 (3,65%). Trần
+của biểu diễn vẫn ~0,7 AUROC; B0 raw (không học) đạt 18,78% @ 6,56, tương đương A+B, nên cải
+thiện kiến trúc không phải nút thắt.
 
 Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm nghẽn biểu diễn:
 - **P4 - nút = IP và đặc trưng nút nhẹ** (theo Anomal-E [8], Kitsune [11]): giảm phân mảnh đồ thị do port tạm thời.
@@ -479,9 +489,10 @@ Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm
    - Baseline cùng protocol cho thấy attention, LapPE và ngữ cảnh đồ thị đều không phải nguồn tín hiệu.
    - Claim "real-time" không đúng ở mức triển khai.
 4. **Đề xuất:**
-   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09, ổn định hơn 5-38 lần, TPR@FPR=1% gấp khoảng 3 lần.
-   - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít.
-   - Kết hợp A + B là hướng tiếp theo, đã có sẵn lệnh chạy.
+   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09 (0,594 -> 0,689), ổn định hơn 5-38 lần, TPR@FPR=1% gấp khoảng 3 lần, TPR@FPR=6,56% tăng 11,54 -> 16,27% (+41%).
+   - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít; tại FPR=1% bằng 0.
+   - (A+B) B2 + P1: 14,49% @ 4,76% và 18,52% @ 6,93% - tốt nhất ở FPR trung bình, nhưng vẫn 0% tại FPR=1% và chỉ hơn B đơn lẻ 2,4 pp.
+   - Đánh giá thẳng: cải thiện **trung bình**, không đột phá; trần biểu diễn ~0,7 AUROC. Muốn vượt cần thêm thông tin (payload/flow stats) hoặc đổi protocol, không phải tinh chỉnh kiến trúc.
 
 ---
 
@@ -805,7 +816,7 @@ contamination 0,06/0,09: FPR ensemble 19,5%; TPR theo lớp 2,9-81,8% - không t
 | 2 | Thực hiện phương pháp và đánh giá kết quả | Đầy đủ | Ch.3 (pipeline 51 GB, 132 test, 428 audit); Ch.4 (T, P_paper, 2018, ACI, latency); Ch.5 (audit code); Phụ lục E |
 | 2b | "Tái lập đúng số liệu paper" | **Có điều kiện** | 99,04% TPR tái lập **chỉ khi** tái tạo artifact hướng: trên `T`, >=3/4 cho **99,22% @ 6,66%** (seed 0; 99,22-99,99% @ 6,52-6,66% qua 3 seed) - trùng Table VI trong 0,2/0,1 pp. Cài đặt đúng Fig. 3: 3,25-18,78% @ 6,56%. Table VI khớp >=3/4, Table VII khớp OR; CSV tác giả 13,12% |
 | 3 | So sánh, đánh giá ưu/nhược với bài khác | Đầy đủ | §6.1 (định vị 7 bài); §6.2 (cùng protocol); §6.3 (5 tuyên bố); §6.4 (cách so sánh); §6.5 (ưu/nhược); Phụ lục B (Table XI-XIII) |
-| 4 | Đề xuất giải pháp cải thiện | Đầy đủ | Ch.7: A (B2 mean aggregation, A2 bỏ LapPE), B (P1 conformal + early-exit), kết quả đo; §7.4 kết hợp |
+| 4 | Đề xuất giải pháp cải thiện | Đầy đủ | Ch.7: A (B2/A2), B (P1), **A+B đã đo** (14,49% @4,76%; 18,52% @6,93%); mức cải thiện trung bình, trần ~0,7 AUROC |
 
 **Kết luận:** cả bốn yêu cầu đã được thực hiện. Riêng yêu cầu "đúng số liệu paper" chỉ đạt
 được ở dạng có điều kiện: 99,04% TPR tái lập được, nhưng phải tái tạo lỗi mã hoá hướng của

@@ -53,6 +53,15 @@ Proposal P1 giải quyết 3 hạn chế thực tế của GTAE-IDS:
 | 0,05 | Fisher | **47,53%** | **18,86%** | **6,24 pkts** | 7,23 pkts | **46,98%** | 0,64 | 2,77% |
 | 0,10 | Fisher | 49,33% | 22,96% | 6,16 pkts | 7,08 pkts | 48,58% | 0,64 | 2,77% |
 
+**A+B (B2 encoder + P1, 3 bước p=2/4/8; `results/P1_egsage/`):**
+
+| Cấu hình | α | TPR | FPR | APD | Early-exit | AUROC fusion | TPR@1% |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| M1 + P1 | 0,05 | 12,13% | 5,17% | 7,57 | 10,4% | 0,604 | 0,00% |
+| M1 + P1 | 0,10 | 19,40% | 7,53% | 7,34 | 15,9% | 0,604 | 0,00% |
+| B2 + P1 | 0,05 | 14,49% | 4,76% | 7,72 | 5,9% | 0,662 | 0,00% |
+| B2 + P1 | 0,10 | 18,52% | 6,93% | 7,59 | 8,4% | 0,662 | 0,00% |
+
 **Nhận xét:**
 - Với **Bonferroni ($\alpha = 0,05$)**, FPR thực đo **3,64%** ($\le 5\%$) và TPR **8,95%**, cao hơn M1 (4,18% @ 2,79%) ở vùng FPR tương đương. Ở $\alpha=0,10$, TPR **14,11%** @ FPR **5,78%**.
 - Với **Bonferroni ($\alpha = 0,01$)**, TPR/FPR đều 0 vì sàn p-value $4/801 = 0,004994 > 0,01/7$; cấu hình này không thể alert với 800 calibration flow.
