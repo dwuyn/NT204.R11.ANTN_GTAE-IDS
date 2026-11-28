@@ -397,6 +397,24 @@ Từ Chương 4-6, GTAE-IDS có hai điểm yếu nằm ở **hai tầng khác n
 
 Đề xuất của nhóm giải quyết lần lượt từng tầng.
 
+**Đã thử đổi kiến trúc trước khi đề xuất.** Nhóm không suy đoán: các biến thể đã được
+train cùng protocol `T`, cùng p = 8, 3 seed:
+
+| Biến thể | Thay đổi | AUROC | TPR @FPR 6,56% | TPR @FPR 1% |
+|---|---|---:|---:|---:|
+| M1 | attention + LapPE | 0,594 | 11,54% | 3,65% |
+| A2 | bỏ LapPE | 0,676 | 15,53% | 6,37% |
+| B2 | mean aggregation thay attention | **0,689** | **16,27%** | **6,40%** |
+| B0 | không học gì (raw 400-d) | **0,698** | **18,78%** | 2,13% |
+| B1 | MLP-AE, không đồ thị | 0,595 | - | 6,95% |
+| A3 | reconstruction error thay detector | 0,649 | - | 6,01% |
+
+Toàn bộ họ kiến trúc nằm trong **0,59-0,70 AUROC** và **11,5-18,8% TPR** ở cùng FPR; biến
+thể tốt nhất hơn M1 +0,095 AUROC, nhưng **B0 không học còn cao hơn**. Đổi attention, PE, độ
+sâu hay thêm tham số chỉ dịch kết quả trong khoảng ~0,1 AUROC; không có biến thể nào tiến
+gần 0,8. Nút thắt là thông tin trong 25 byte header và dịch chuyển benign theo ngày, không
+phải kiến trúc. Vì vậy Đề xuất A chọn **đơn giản hoá và ổn định hoá** thay vì thêm tầng.
+
 ### 7.2 Đề xuất A (tầng biểu diễn): bộ mã hoá gọn hơn
 **Nội dung:** thay attention giữa các cạnh bằng **mean aggregation** (E-GraphSAGE-AE, giữ nguyên độ sâu và độ rộng của `ARCH[p]`) và **bỏ LapPE**.
 
