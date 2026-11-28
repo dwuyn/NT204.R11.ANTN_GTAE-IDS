@@ -1,6 +1,6 @@
 # Rà soát tái hiện GTAE-IDS — Paper vs Implementation
 
-**Cập nhật:** 2026-11-22 (§5–§7 viết lại sau khi đối chiếu từng cáo buộc với PDF bài báo và repo tác giả)
+**Cập nhật:** 2026-11-29 (§5.7–§5.9 bổ sung sau khi chạy checkpoint công bố và tái tạo artifact hướng gói tin)
 **Paper:** Ghadermazi et al., *GTAE-IDS*, IEEE TIFS 20:4026–4041, 2025.
 **Tài liệu phân tích:** [`GTAE-IDS_Research_docs.md`](GTAE-IDS_Research_docs.md)
 **Work plan:** [`WORK_PLAN.md`](WORK_PLAN.md)
@@ -111,6 +111,9 @@ Nguồn kiểm tra:
 | F5 | Detector chạy trên **output của decoder** (bản tái tạo 400 chiều), không phải bottleneck | **Đã kiểm chứng** | Trung bình: detector thực chất chạy trên gần như feature thô |
 | F6 | Lớp `GraphAutoencoder` công khai không nối encoder vào decoder và **không chạy được** | **Đã kiểm chứng phần code; chưa chứng minh được mô hình đã chạy** | Không xác định: notebook không phản ánh code đã sinh kết quả |
 | F7 | Nhãn gói tin bị trượt hàng (row-shift) trong repo trích xuất | **Đã kiểm chứng và đã định lượng** | Thứ Ba: 13,9% gói sai nhãn, precision nhãn tấn công 11,8%, recall 14,8%, 14,4% flow bị ảnh hưởng (`results/label_shift_f7.csv`) |
+| F8 | Detector trong code dùng contamination **0,06/0,09**, không phải 0,01 như Table V | **Đã kiểm chứng** | Trực tiếp: giải thích FPR 9-13% của CSV; không tạo TPR 99% |
+| F9 | Hướng gói tin mã hoá nhãn: benign `unknown` -> nửa sau, attack fwd/bwd | **Đã kiểm chứng ở code + tái tạo số** | **Trực tiếp: luật 1 bit TPR 100%/FPR 0%; detector của tác giả 100% TPR @ 17,7% FPR, khớp CSV 13,12%** |
+| F10 | Checkpoint công bố không khớp Table III và không tái tạo CSV trên dữ liệu nhóm | **Đã kiểm chứng** | 8 lớp/d_model 400/decoder 400x400 (Table III: 6 lớp, d=64); FPR 19,5%, TPR 2,9-81,8% |
 
 ### 5.1 (F1, F2) Luật ensemble và điểm vận hành công bố
 
@@ -197,6 +200,63 @@ Gán theo chỉ số vị trí nên từ gói nền đầu tiên bị bỏ sót 
 
 ---
 
+### 5.7 (F8) Contamination trong code không phải 0,01
+
+Table V của paper ghi contamination = 0,01 cho cả bốn detector. `GTAE_8pkt.ipynb`, cell 55-59:
+
+```python
+model_ocsvm  = OCSVM(nu=0.05, contamination=0.06)
+model_iforest = IForest(contamination=0.09)
+model_inne   = INNE(contamination=0.09)
+model_hbos   = HBOS(contamination=0.09)
+```
+
+Với contamination 0,09, mỗi detector tự gán ~9-10% benign train là outlier, nên FPR trên
+benign test cùng phân phối cũng ~9-10% — đúng cột Benign của CSV (9,86/9,92/9,98; OCSVM
+8,06 vì `nu=0,05`). Đây là lời giải thích đầy đủ cho F2 (paper 6,56% so với CSV 13,12%):
+con số 6,56% không phải là output của cấu hình trong code.
+
+### 5.8 (F9) Hướng gói tin mã hoá nhãn - nguyên nhân chính của TPR 99%
+
+**Code.** `robust-and-real-time-NIDS/data_extraction/*_Packet_Level_Data.ipynb`, cell 1: chỉ
+gói thuộc đúng cặp IP attacker/victim và đúng cửa sổ mới được gán `'fwd'`/`'bwd'`; nhánh cuối
+gán `dict_direction[packets] = 'unknown'` cho mọi gói còn lại, tức toàn bộ benign.
+`graph-representation-learning-for-NIDS/graph_generation/*_data_preparation_gnn*.ipynb` dựng
+`pkt_vals` bằng `if Direction == 'fwd': [header, 25 zeros] else: [25 zeros, header]`. Vì
+`'unknown'` rơi vào `else`, mọi gói benign nằm ở **nửa sau** của block 50 chiều, còn gói
+attack có thể nằm nửa trước.
+
+**Hệ quả.** 25 chiều đầu của mọi block benign bằng 0. Luật một bit "có byte khác 0 ở nửa
+trước" tách benign/attack gần như hoàn hảo; không cần graph, transformer hay học.
+
+**Tái tạo số** (`scripts/eval_direction_leak.py`, `results/direction_leak.csv`): áp đúng cách
+mã hoá benign lên graph `P_paper` của nhóm, chạy đúng bốn detector + contamination của code
+tác giả (StandardScaler trên benign train):
+
+| | Benign (FPR) | DDoS | Hulk | PortScan | Ensemble attack |
+|---|---:|---:|---:|---:|---:|
+| Nhóm tái tạo (P_paper) | 17,7% (per-detector 6,0-9,8%) | 100% | 100% | 100% | 100% (OCSVM/INNE 100%, IF 96,2-100%) |
+| CSV tác giả | 13,12% (8,06-9,98%) | 99,34% | 98,74% | 98,50% | 98,50-99,83% |
+
+Luật 1 bit đạt TPR 100% / FPR 0%. Với cách mã hoá nhất quán của nhóm (hướng = sender gói
+đầu, áp cho cả hai lớp), benign cũng có fwd (99,98%) nên luật này vô dụng - và đó là lý do
+pipeline sạch không thể đạt 99%.
+
+**Mức kiểm chứng.** Đường code đã kiểm chứng; file `.pkl` gốc không công khai nên không mở
+trực tiếp được. Khớp số (FPR từng detector, TPR từng lớp) là bằng chứng bổ sung.
+
+### 5.9 (F10) Checkpoint công bố không khớp Table III và không tái tạo CSV
+
+`best_GTAE_model_8pkt.pth` (sha256 `fe31a4c8...32f1a7d`) chứa 8 lớp
+`nn.TransformerEncoderLayer` với `d_model=400`, `nhead=8`, FFN 64, và `decoder` 400x400.
+Table III của paper ghi p=8: 6 lớp, 8 head, d=64. Lớp `GraphAutoencoder` công bố không khởi
+tạo được (F6), nên checkpoint là manh mối duy nhất về mô hình thật, và nó không khớp paper.
+
+Chạy checkpoint này trên dữ liệu của nhóm (feature 400-d giống hệt về semantics, scaler fit
+trên `train1`, bốn detector ở contamination 0,06/0,09): FPR ensemble **19,5%**, TPR theo lớp
+**2,9-81,8%** - không tái tạo được CSV 98,5-99,8%. Tức là ngay cả mô hình công khai + cấu
+hình công khai + split same-day cũng không sinh ra con số công bố trên dữ liệu công khai.
+
 ## 6. Bảng đối chiếu theo lớp (p = 8)
 
 | Lớp tấn công | Paper Table VII | CSV của tác giả | Nhóm, protocol `T` (mean ± std 3 seed, tie) | n (T) | Nhóm, `P_paper` (luật OR) |
@@ -225,7 +285,10 @@ Nguồn: cột 4 tính từ `results/M1_p8_seed{0,1,2}.json` (`ensembles.tie.per
    - Table VII được sinh bởi luật OR, trái với mô tả *majority voting* (F1).
    - FPR công bố không khớp CSV công khai của chính tác giả (F2).
    - Thiết lập test per-class (F3) và benign cùng ngày (F4) dễ hơn nhiều so với triển khai thực tế.
-   - Notebook công khai không phản ánh code đã chạy (F5, F6).
+   - Notebook công khai không phản ánh code đã chạy (F5, F6); contamination thực là 0,06/0,09 (F8);
+   - **Hướng gói tin benign bị gán `unknown` và dồn vào nửa sau, trong khi attack giữ fwd/bwd,
+     tạo ra một luật 1 bit đạt TPR 100% / FPR 0% (F9)** - đây là nguồn chính của TPR ~99%;
+   - checkpoint công bố không khớp Table III và không tái tạo CSV trên dữ liệu nhóm (F10).
 3. **Những gì chưa chứng minh được** (không nên trình bày như kết luận):
    - mô hình của tác giả thực chất là `Linear(400, 400)`;
    - lỗi trượt nhãn (F7) gây ra TPR cao;

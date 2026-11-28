@@ -44,6 +44,7 @@
 - FPR Ensemble công bố (6,56%) không khớp CSV công khai của tác giả (13,12%).
 - Mỗi lớp tấn công được test trên **một đồ thị riêng**, benign train/test cùng **một ngày**.
 - Detector chạy trên **output của decoder**, và notebook công bố **không chạy được** như hiện có.
+- **Truy vết được nguồn gốc của 99%**: pipeline trích xuất của tác giả gán `Direction='unknown'` cho benign và dồn các gói này vào nửa sau của vector, trong khi attack giữ fwd/bwd. Một luật một bit đạt **TPR 100% / FPR 0%**; khi mã hoá hướng nhất quán, cả classifier giám sát cross-day cũng chỉ đạt 3,5-23% TPR.
 
 **So sánh với nghiên cứu liên quan** (Chương 6). Các baseline cùng protocol cho thấy:
 - **Attention không phải nguồn tín hiệu**: E-GraphSAGE-AE (mean aggregation) đạt AUROC **0,689 ± 0,021**, cao hơn GTAE.
@@ -227,8 +228,65 @@ Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kế
 | F5 | Detector chạy trên **output của decoder** (`autoencoder(...)` trả về bản tái tạo 400 chiều), không phải embedding ở bottleneck như bài báo mô tả (§IV-C) | Đã kiểm chứng |
 | F6 | Lớp `GraphAutoencoder` công bố không nối encoder vào decoder (`self.decoder(features)`), dùng `nn.GraphTransformerLayer` (không tồn tại trong PyTorch) và có `execution_count` lộn xộn. Kết luận: **notebook không phản ánh code đã sinh ra kết quả**. Nhóm **không** khẳng định mô hình thực tế là `Linear(400, 400)` | Đã kiểm chứng phần code |
 | F7 | Trong repo trích xuất gói tin, gói nền trong cửa sổ tấn công không được gán nhãn (thiếu `else`). Cột nhãn được gán theo vị trí rồi `dropna()`, nên nhãn bị **trượt hàng** | Đã định lượng trên Thứ Ba: 269.201/851.306 gói bị bỏ qua, **13,9%** gói sai nhãn, precision nhãn tấn công **11,8%**, recall **14,8%**, **14,4%** flow bị ảnh hưởng |
+| F8 | Detector trong code dùng **contamination 0,06/0,09**, không phải 0,01 như Table V | Đã kiểm chứng; giải thích FPR 9-13% của CSV |
+| F9 | **Hướng gói tin mã hoá nhãn:** benign nhận `Direction='unknown'` và bị dồn vào nửa sau của vector 50 chiều; attack giữ fwd/bwd | Đã kiểm chứng ở code + tái tạo số: luật 1 bit **TPR 100% / FPR 0%**; detector của tác giả 100% TPR @ 17,7% FPR, khớp CSV (13,12%) |
+| F10 | Checkpoint công bố (8 lớp, d_model 400, decoder 400×400) không khớp Table III (6 lớp, d=64) và không tái tạo CSV trên dữ liệu nhóm | Đã kiểm chứng: FPR ensemble 19,5%, TPR theo lớp 2,9-81,8% |
 
-**Kết luận:** F1 + F2 giải thích vì sao các con số công bố không tái tạo được từ artefact. F3 + F4 + F5 cho thấy thiết lập đánh giá của code dễ hơn nhiều so với tình huống triển khai thật. Phần còn lại của khoảng cách (Chương 4.3) cho thấy, ngay cả khi làm theo đúng thiết lập của bài báo, embedding GTAE vẫn không tách được benign khỏi tấn công.
+**Kết luận:** F1 + F2 + F8 cho thấy con số công bố không tái tạo được từ artefact, và bản thân các artefact mâu thuẫn nhau. F3 + F4 + F5 cho thấy thiết lập đánh giá của code dễ hơn nhiều so với triển khai thật. **F9 là mắt xích còn thiếu: nó biến 99% thành một artifact mã hoá, không phải năng lực của mô hình** (mục 5.1). Phần còn lại của khoảng cách (Chương 4.3) cho thấy, ngay cả khi làm theo đúng thiết lập của bài báo, embedding GTAE vẫn không tách được benign khỏi tấn công.
+
+### 5.1 Vì sao không thể khớp 99%: phân rã khoảng cách
+
+**Bốn phiên bản của "con số mục tiêu".** Không có một mục tiêu duy nhất để so:
+
+| Nguồn | TPR | FPR | Ghi chú |
+|---|---:|---:|---|
+| Paper, Table VI (p=8) | 99,04% | 6,56% | Ensemble; OCSVM 98,46/4,03; IF 96,66/4,93; HBOS 97,73/4,96; INNE 96,47/4,99 |
+| CSV công khai của tác giả | 98,50-99,83% theo lớp | **13,12%** | Cùng file sinh Table VII (F1) |
+| Code công bố (cell 55-59) | - | 8,06-9,98% mỗi detector | Contamination **0,06/0,09**, không phải 0,01 (F8) |
+| Checkpoint công bố | - | - | 8 lớp, d_model 400, decoder 400×400; Table III ghi 6 lớp, d=64 (F10) |
+
+**Cơ chế chính: hướng gói tin mã hoá nhãn (F9).** Extractor của tác giả gán
+`Direction='unknown'` cho mọi gói không thuộc đúng cặp attacker/victim trong cửa sổ tấn công
+(tức toàn bộ benign). Bước dựng `pkt_vals` ghi mọi hướng khác `'fwd'` vào **nửa sau** của
+block 50 chiều. Hệ quả: 25 chiều đầu của mọi block benign bằng 0, còn gói attack có fwd nằm
+nửa trước. Một luật một bit "có byte khác 0 ở nửa trước" tách hai lớp gần như hoàn hảo mà
+không cần graph, transformer hay học.
+
+| Áp cách mã hoá benign của tác giả lên `P_paper` | Benign (FPR) | TPR mọi lớp |
+|---|---:|---:|
+| Luật 1 bit (fwd khác 0) | 0,0% | **100%** |
+| OCSVM / INNE | 6,0 / 9,1% | 100% |
+| IForest | 9,4% | 96,2-100% |
+| Ensemble OR (HBOS suy biến ở pyod 3.6.7) | 17,7% | **100%** |
+| CSV của tác giả (để so) | 13,12% (8,06-9,98%) | 98,50-99,83% |
+
+Với cách mã hoá nhất quán của nhóm (hướng = sender gói đầu, áp cho cả hai lớp), 99,98% flow
+benign cũng có fwd, nên luật này không còn tín hiệu. Bảng đầy đủ: `results/direction_leak.csv`.
+
+**Các mức đo được khi mã hoá nhất quán** (p=8, threshold đặt để FPR benign test = 6,56%):
+
+| Cấu hình | Split | Đầu vào detector | TPR @ 6,56% | AUROC |
+|---|---|---|---:|---:|
+| `P_paper` GTAE của nhóm | same-day (Friday 70/30) | bottleneck `z` | 3,25% | 0,478 |
+| `P_paper` raw | same-day | 400 byte thô | 3,25% | 0,402 |
+| `P_paper` decoder output | same-day | recon 400-d | 4,93% | 0,452 |
+| `T` GTAE của nhóm | temporal (Mon -> Tue-Fri) | bottleneck `z` | 11,54% | 0,594 |
+| `T` raw | temporal | 400 byte thô | 18,78% | 0,698 |
+| Supervised RF, same-day | Friday 70/30 | 400 byte thô | **99,9%** | 0,999 |
+| Supervised RF, cross-day | Tue+Wed -> Thu+Fri | 400 byte thô | 3,2-3,8% | 0,54 |
+| Supervised RF, cross-day | Tue+Wed -> Thu+Fri | `z` | 11,0-23,2% | 0,64-0,75 |
+
+Hai quan sát quyết định. Thứ nhất, **cùng split same-day, chỉ classifier giám sát trên byte
+thô đạt 99,9%**; GTAE same-day chỉ 3,25% với `z` và 4,93% với decoder output - split một mình
+không tạo ra 99%. Thứ hai, **mọi cấu hình cross-day đều dừng ở <= 23,2% TPR @ 6,56%** (cao
+nhất: supervised RF trên `z` 23,2%; raw OD 18,78%); không cấu hình nào tiến gần 99%, tức trần
+đến từ feature/dữ liệu chứ không từ optimizer.
+
+**Điều kiện để "giống".** Muốn đạt 99% phải đồng thời: (i) gán hướng benign khác attack
+(F9); (ii) chia benign train/test cùng ngày (F4); (iii) dùng contamination 0,06/0,09 (F8);
+(iv) báo FPR 6,56% dù artefact cho 13,12% (F2); (v) chạy một lớp mô hình mà code công bố
+không khởi tạo được (F6/F10). Đó là tái lập **lỗi**, không phải tái lập phương pháp. Vì vậy
+báo cáo giữ 99% như một artefact đã truy vết, không phải mục tiêu cần khớp.
 
 ---
 
@@ -390,7 +448,8 @@ Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm
 1. **Tìm hiểu bài báo:** nhóm phân tích đầy đủ phương pháp, cài đặt đúng Table III/V và Fig. 3/4, và liệt kê những điểm bài báo không mô tả nhưng ảnh hưởng tới khả năng tái lập (§2.5).
 2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 132 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% @ 6,56% **không tái lập được**, kể cả trong thiết lập giống bài báo nhất (`P_paper`: 3,25%). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
 3. **Đối chiếu và so sánh:**
-   - Nhóm kiểm chứng được các mâu thuẫn giữa bài báo, code và CSV của tác giả (luật OR, FPR không khớp, test theo từng lớp, notebook không chạy được).
+   - Nhóm kiểm chứng được các mâu thuẫn giữa bài báo, code và CSV của tác giả (luật OR, FPR không khớp, contamination 0,06/0,09, test theo từng lớp, notebook không chạy được).
+   - **Nguyên nhân chính của 99% đã được truy vết**: hướng gói tin benign bị gán `unknown` và dồn vào nửa sau, tạo ra một luật 1 bit TPR 100% / FPR 0%; tái tạo đúng cách mã hoá đó trên `P_paper` cho 100% TPR @ 17,7% FPR, khớp CSV tác giả (98,5-99,8% @ 13,12%).
    - Baseline cùng protocol cho thấy attention, LapPE và ngữ cảnh đồ thị đều không phải nguồn tín hiệu.
    - Claim "real-time" không đúng ở mức triển khai.
 4. **Đề xuất:**
@@ -635,7 +694,7 @@ lượng đến; 3.116/3.492 flow đo là `stale` (đóng ở biên capture). Th
 0,000 / 0,008 / 0,079 / 0,079 s ở attack, p95 = 3,79 s. Theo lớp ở p=8: Slowhttptest 63,1 s
 (p95 218 s), slowloris 3,0 s (p95 46,5 s), GoldenEye 6,27 s, PortScan chỉ 0,1% flow đạt 8 gói.
 
-## PHỤ LỤC F - CHI TIẾT ĐỐI CHIẾU MÃ NGUỒN (F1-F7)
+## PHỤ LỤC F - CHI TIẾT ĐỐI CHIẾU MÃ NGUỒN (F1-F10)
 
 ### F.1 (F1) Table VII trùng khớp output của luật OR
 
@@ -682,3 +741,31 @@ như hiện có.
 
 Trên Thứ Ba: 851.306 gói, 269.201 gói nền trong cửa sổ bị bỏ qua, 80.848 gói (13,9%) sai
 nhãn; precision nhãn tấn công 11,8%, recall 14,8%; 15.893 flow (14,4%) bị ảnh hưởng.
+
+### F.6 (F8) Contamination thực trong code
+
+Cell 55-59 dùng `OCSVM(nu=0.05, contamination=0.06)` và `IForest/HBOS/INNE(contamination=0.09)`,
+không phải 0,01 như Table V. Với 0,09, mỗi detector tự gán ~9-10% benign train là outlier,
+nên FPR benign test ~9-10%, đúng cột Benign của CSV. Đây là lời giải thích đầy đủ cho F2.
+
+### F.7 (F9) Hướng gói tin: benign `unknown` -> nửa sau
+
+Extractor gán `'unknown'` cho mọi gói không thuộc cặp attacker/victim trong cửa sổ; bước dựng
+`pkt_vals` ghi mọi hướng khác `'fwd'` vào nửa sau. Vì vậy 25 chiều đầu của mọi block benign
+bằng 0, còn attack có fwd. Tái tạo trên `P_paper` (`results/direction_leak.csv`):
+
+| | Benign FPR | TPR (mọi lớp) |
+|---|---:|---:|
+| Luật 1 bit "fwd khác 0" | 0,0% | 100% |
+| OCSVM / INNE | 6,0 / 9,1% | 100% |
+| IForest | 9,4% | 96,2-100% |
+| Ensemble OR | 17,7% | 100% |
+| CSV tác giả | 13,12% (8,06-9,98%) | 98,50-99,83% |
+
+Với mã hoá nhất quán của nhóm, 99,98% benign cũng có fwd, nên luật này không còn tín hiệu.
+
+### F.8 (F10) Checkpoint công bố
+
+8 lớp `nn.TransformerEncoderLayer`, `d_model=400`, FFN 64, decoder 400×400; Table III ghi
+6 lớp, d=64. Chạy checkpoint trên feature `P_paper` (cùng semantics), scaler trên `train1`,
+contamination 0,06/0,09: FPR ensemble 19,5%; TPR theo lớp 2,9-81,8% - không tái tạo CSV.

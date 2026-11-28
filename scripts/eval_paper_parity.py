@@ -46,6 +46,8 @@ from src.detectors import (  # noqa: E402
 )
 from src.embed import embed_graph, load_model  # noqa: E402
 from src.graph_builder import load_graph  # noqa: E402
+from src.line_graph import build_line_graph  # noqa: E402
+from src.pe import PE_DIM, edge_pe, laplacian_pe  # noqa: E402
 
 CONTAMINATIONS = (0.001, 0.01, 0.04, 0.05, 0.1)
 PAPER_FPR = 0.0656
@@ -90,6 +92,7 @@ FIELDS = [
     "fpr_at_threshold_6.56pct",
     "tpr_at_test_fpr_6.56pct",
     "tpr_at_test_fpr_1pct",
+    "feature_input",
 ]
 
 
@@ -121,6 +124,32 @@ def _fuse(scores: dict[str, np.ndarray], calib: dict[str, np.ndarray]) -> tuple[
     return fused[:n_calib], fused[n_calib:]
 
 
+def _features(
+    model: torch.nn.Module,
+    graph: Any,
+    device: torch.device,
+    use_pe: bool,
+    seed: int,
+    feature_input: str,
+) -> np.ndarray:
+    """One feature matrix per edge: bottleneck ``z``, decoder output ``recon``, or raw input."""
+    if feature_input == "raw":
+        return graph.edge_attr.astype(np.float32)
+    line = build_line_graph(
+        graph.edge_index, graph.num_nodes, max_neighbors=32, seed=seed
+    )
+    x = torch.from_numpy(graph.edge_attr).to(device)
+    line_t = torch.as_tensor(line, dtype=torch.long, device=device)
+    pe_t = None
+    if use_pe:
+        node_pe = laplacian_pe(graph.edge_index, graph.num_nodes, k=PE_DIM, seed=seed)
+        pe = edge_pe(node_pe, graph.edge_index)
+        pe_t = torch.from_numpy(pe).to(device)
+    with torch.no_grad():
+        recon, z = model(x, line_t, pe_t)
+    return (recon if feature_input == "recon" else z).cpu().numpy()
+
+
 def _embed(
     protocol: str,
     graphs_dir: Path,
@@ -129,9 +158,14 @@ def _embed(
     seed: int,
     device: torch.device,
     cache_dir: Path | None,
+    feature_input: str = "z",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """(z_train2, z_test, y_test, attack_type_test), cached per split on disk."""
-    cache = cache_dir / f"{protocol}_p{p}_seed{seed}" if cache_dir is not None else None
+    """(features_train2, features_test, y_test, attack_type_test), cached on disk."""
+    cache = (
+        cache_dir / f"{protocol}_p{p}_seed{seed}_{feature_input}"
+        if cache_dir is not None
+        else None
+    )
     if cache is not None and (cache / "train2.npz").exists() and (cache / "test.npz").exists():
         train2_cache = np.load(cache / "train2.npz", allow_pickle=False)
         test_cache = np.load(cache / "test.npz", allow_pickle=False)
@@ -144,10 +178,14 @@ def _embed(
 
     train2 = load_graph(graphs_dir / f"p{p}" / "train2.npz")
     test = load_graph(graphs_dir / f"p{p}" / "test.npz")
-    model, checkpoint = load_model(model_path, device)
-    use_pe = bool(checkpoint.get("use_pe", True))
-    z_train = embed_graph(model, train2, device, use_pe=use_pe, seed=seed)
-    z_test = embed_graph(model, test, device, use_pe=use_pe, seed=seed)
+    if feature_input == "raw":
+        z_train = train2.edge_attr.astype(np.float32)
+        z_test = test.edge_attr.astype(np.float32)
+    else:
+        model, checkpoint = load_model(model_path, device)
+        use_pe = bool(checkpoint.get("use_pe", True))
+        z_train = _features(model, train2, device, use_pe, seed, feature_input)
+        z_test = _features(model, test, device, use_pe, seed, feature_input)
     if cache is not None:
         cache.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(cache / "train2.npz", z=z_train.astype(np.float32))
@@ -173,6 +211,7 @@ def _row(
     scores_test: np.ndarray,
     pred_calib: np.ndarray,
     scores_calib: np.ndarray,
+    feature_input: str = "z",
 ) -> dict[str, Any]:
     at_paper = metrics(
         y,
@@ -209,6 +248,7 @@ def _row(
         "tpr_at_test_fpr_6.56pct": _tpr_at_test_fpr(y, scores_test, PAPER_FPR),
         "tpr_at_test_fpr_1pct": _tpr_at_test_fpr(y, scores_test, 0.01),
         "per_class_tpr": at_paper.get("per_class_tpr"),
+        "feature_input": feature_input,
     }
 
 
@@ -219,6 +259,7 @@ def evaluate_seed(
     device: torch.device,
     cache_dir: Path | None,
     contaminations: tuple[float, ...] = CONTAMINATIONS,
+    feature_input: str = "z",
 ) -> list[dict[str, Any]]:
     graphs_dir = REPO_ROOT / PROTOCOLS[protocol]["graphs"]
     models_dir = REPO_ROOT / PROTOCOLS[protocol]["models"]
@@ -227,7 +268,7 @@ def evaluate_seed(
         raise FileNotFoundError(model_path)
     print(f"[parity] {protocol} p={p} seed={seed}: embed {model_path}", flush=True)
     z_train, z_test, y, attack_types = _embed(
-        protocol, graphs_dir, model_path, p, seed, device, cache_dir
+        protocol, graphs_dir, model_path, p, seed, device, cache_dir, feature_input
     )
 
     rng = np.random.default_rng(seed)
@@ -256,7 +297,7 @@ def evaluate_seed(
                 _row(
                     protocol, p, seed, rule, contamination, y, attack_types,
                     _vote_all(pred_test, rule), fused_test,
-                    _vote_all(pred_calib, rule), fused_calib,
+                    _vote_all(pred_calib, rule), fused_calib, feature_input,
                 )
             )
     return rows
@@ -701,6 +742,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also report AUROC on full-p vs zero-padded test edges",
     )
+    parser.add_argument(
+        "--feature-input",
+        default="z",
+        choices=["z", "recon", "raw"],
+        help="detector input: encoder bottleneck (paper text), decoder output "
+        "(authors' code), or the raw 50p edge vector",
+    )
     args = parser.parse_args(argv)
 
     if args.graphs:
@@ -744,7 +792,16 @@ def main(argv: list[str] | None = None) -> int:
         grid: list[dict[str, Any]] = []
         for p in args.ps:
             for seed in args.seeds:
-                grid.extend(evaluate_seed(protocol, p, seed, device, cache_dir))
+                grid.extend(
+                    evaluate_seed(
+                        protocol,
+                        p,
+                        seed,
+                        device,
+                        cache_dir,
+                        feature_input=args.feature_input,
+                    )
+                )
         picks = select_rows(grid)
         for p in args.ps:
             prefix = "" if protocol == "P_paper" else f"{protocol}_"
