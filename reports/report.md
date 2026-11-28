@@ -171,6 +171,17 @@ Các protocol đánh giá:
 
 Bảy seed mỗi p (3 canonical + 4 bổ sung). So với 3 seed, p=8 tăng từ 0,594 lên **0,663 ± 0,092** - cú rơi ở p=8 một phần là nhiễu seed. Nhưng đường cong vẫn **không đơn điệu**: AUROC đỉnh ở p=6 rồi giảm ở p=7-8, TPR cũng vậy. Tiêu chí "TPR tăng theo p" vì thế **không đạt ngay cả với 7 seed** - đây là kết quả đo, không phải thiếu mẫu. Khoảng cách tới 99,04% của bài báo vẫn lớn hơn nhiều lần độ lệch chuẩn.
 
+So trực tiếp với Table VI ở **cùng FPR 6,56%** (thay vì ngưỡng riêng của từng bên):
+
+| p | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Paper TPR (%) | 84,47 | 91,02 | 94,72 | 97,16 | 98,44 | 98,72 | **99,04** |
+| `T` TPR @6,56 (%) | 10,22 | 8,37 | 19,67 | 11,48 | **33,77** | 19,99 | 11,54 |
+| `P_paper` TPR @6,56 (%) | 3,79 | 12,47 | 5,36 | 1,10 | 5,40 | 26,77 | 3,25 |
+
+Paper tăng đơn điệu; nhóm không đơn điệu và thấp hơn 3-30 lần. Paper FPR dao động 5,91-8,94%
+giữa các p, nên cột so sánh chỉ gần đúng về điểm vận hành.
+
 ### 4.3 Dựng lại đúng thiết lập của bài báo (`P_paper`)
 Để loại trừ khả năng "kết quả âm chỉ là do cách dựng tập test của nhóm", nhóm dựng protocol `P_paper`:
 - lấy **dòng CSV CICFlowMeter làm định nghĩa luồng** (đúng cách bài báo đếm cạnh);
@@ -186,7 +197,8 @@ Hai lớp **không thể** tái lập từ artefact công khai: CSV chỉ có 11
 
 | Thiết lập | Luật | TPR @ FPR 6,56% (matched) | TPR @ FPR 1% | AUROC |
 |---|---|---:|---:|---:|
-| Paper Table VI | "majority" (thực tế là OR) | **99,04%** | - | - |
+| Paper Table VI | majority (>=3/4) | **99,04%** | - | - |
+| Paper Table VII / CSV | OR (>=1/4) | 98,50-99,83% (per-class) | - | - |
 | `P_paper` | tie / strict / OR | **3,25%** | 1,39% | 0,478 |
 | `P_paper` | INNE (detector tốt nhất) | 8,31% | 4,12% | 0,590 |
 | `T` (cùng pipeline) | tie | 11,54% | 2,79% | 0,594 |
