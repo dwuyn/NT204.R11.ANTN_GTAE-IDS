@@ -4,14 +4,17 @@
 **Câu hỏi:** paper báo TPR 99,04% @ FPR 6,56% (Table VI), nhóm tái lập được 4-12% TPR ở cùng
 vùng FPR. Khoảng cách này đến từ đâu, và có thể "làm cho giống" không?
 
-**Kết luận ngắn:** không thể, vì (1) con số mục tiêu không nhất quán với chính artefact công
-khai của tác giả, và (2) phần lớn khoảng cách được tạo bởi một **artifact mã hoá hướng gói tin**
+**Kết luận ngắn:** không thể bằng một cài đặt đúng: (1) con số mục tiêu không nhất quán với
+chính artefact công khai của tác giả, và (2) phần lớn khoảng cách được tạo bởi một **artifact
+mã hoá hướng gói tin**
 trong pipeline trích xuất của tác giả: mọi gói benign bị gán `Direction = 'unknown'` và được
 đẩy vào nửa sau của vector 50 chiều, còn gói attack giữ fwd/bwd. Khi tái tạo đúng cách mã hoá
 đó trên dữ liệu của nhóm, bốn detector của tác giả đạt **100% TPR** cho mọi lớp tấn công và
 FPR 6,0-10,2% mỗi detector (17,7% ensemble) - khớp với CSV công khai của tác giả
-(94-99,7% TPR, FPR 8,06-9,98%, ensemble 13,12%). Khi mã hoá hướng nhất quán cho cả hai lớp
-(đúng Fig. 3), cùng bộ detector chỉ còn **3,2-11,5% TPR @ 6,56% FPR**.
+(94-99,7% TPR, FPR 8,06-9,98%, ensemble 13,12%). Với bỏ phiếu >=3/4, artifact cho
+**99,22% @ 6,66%** trên `T` (seed 0), tái lập Table VI (99,04% @ 6,56%) trong 0,2/0,1 pp.
+Khi mã hoá hướng nhất quán cho cả hai lớp (đúng Fig. 3), cùng bộ detector chỉ còn
+**3,2-18,8% TPR @ 6,56% FPR**.
 
 ---
 
@@ -118,6 +121,22 @@ vị trí mà pipeline gốc tình cờ tạo ra.
 
 ---
 
+### 2.5 Tái lập đúng Table VI (99,04% @ 6,56%)
+
+Quét ngưỡng bỏ phiếu trên cùng artifact (`results/direction_leak_votes.csv`):
+
+| Protocol | Ngưỡng | FPR (3 seed) | TPR (3 seed) | Seed 0 |
+|---|---|---:|---:|---:|
+| `P_paper` | >=2/4 | 8,58-8,92% | 100% | 100% @ 8,58% |
+| `P_paper` | >=3/4 | 5,44-5,62% | 95,58-99,04% | 99,04% @ 5,50% |
+| `T` | >=3/4 | 6,52-6,66% | 99,22-99,99% | **99,22% @ 6,66%** |
+| Paper Table VI | majority | 6,56% | 99,04% | - |
+
+Trên `T`, >=3/4 tái lập Table VI gần như chính xác (lệch 0,2 pp TPR, 0,1 pp FPR). Đổi lại,
+nó chỉ đạt được khi tái tạo artifact hướng. Đáng chú ý: Table VI khớp **majority** (>=3/4)
+đúng như văn bản, còn Table VII khớp **OR** của code (F1): hai bảng của bài báo dùng hai luật
+khác nhau, và CSV công khai (13,12%) là kết quả của OR.
+
 ## 3. Các mức đo được khi mã hoá nhất quán
 
 Tất cả ở p = 8, protocol ghi rõ, threshold đặt sao cho **FPR trên benign test = 6,56%**
@@ -128,7 +147,8 @@ Tất cả ở p = 8, protocol ghi rõ, threshold đặt sao cho **FPR trên ben
 |---|---|---|---:|---:|
 | Paper Table VI | same-day (Friday) | decoder output | 99,04% | - |
 | CSV tác giả | same-day (Friday) | decoder output | 98,5-99,8% | - |
-| Mô phỏng mã hoá benign của tác giả | same-day | raw + vị trí lệch | **100%** | - |
+| Mô phỏng mã hoá benign của tác giả | same-day | raw + vị trí lệch | **100%** @ 17,7% FPR | - |
+| Mô phỏng + bỏ phiếu >=3/4 (`T`) | temporal | raw + vị trí lệch | **99,22% @ 6,66%** | - |
 | `P_paper` GTAE của nhóm | same-day (Friday 70/30) | bottleneck `z` | 3,25% | 0,478 |
 | `P_paper` raw | same-day | 400 byte thô | 3,25% | 0,402 |
 | `P_paper` decoder output | same-day | recon 400-d | 4,93% | 0,452 |

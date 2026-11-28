@@ -88,9 +88,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--p", type=int, default=8)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", default="results/direction_leak.csv")
+    parser.add_argument(
+        "--votes-out", default="results/direction_leak_votes.csv",
+        help="vote-threshold sweep (>=1..4 detectors) under the same encoding",
+    )
+    parser.add_argument("--vote-seeds", type=int, nargs="+", default=[0, 1, 2])
     args = parser.parse_args(argv)
 
     rows: list[dict] = []
+    vote_rows: list[dict] = []
     for graphs in args.graphs:
         train = load_graph(Path(graphs) / f"p{args.p}" / "train1.npz")
         test = load_graph(Path(graphs) / f"p{args.p}" / "test.npz")
@@ -103,6 +109,25 @@ def main(argv: list[str] | None = None) -> int:
         xte = authors_benign_encoding(test.edge_attr.astype(np.float64), y, args.p)
         predictions = fit_predict(xtr, xte, args.seed)
         fwd = forward_nonempty(xte, args.p)
+
+        for vote_seed in args.vote_seeds:
+            vote_pred = (
+                predictions
+                if vote_seed == args.seed
+                else fit_predict(xtr, xte, vote_seed)
+            )
+            votes = np.sum([vote_pred[name] for name in DETECTOR_NAMES], axis=0)
+            for min_votes in (1, 2, 3, 4):
+                alert = votes >= min_votes
+                vote_rows.append(
+                    {
+                        "protocol": protocol,
+                        "seed": vote_seed,
+                        "min_votes": min_votes,
+                        "fpr": float(alert[y == 0].mean()),
+                        "tpr": float(alert[y == 1].mean()),
+                    }
+                )
 
         groups = [("Benign", y == 0)]
         for attack in sorted(set(attack_type[y == 1])):
@@ -133,6 +158,20 @@ def main(argv: list[str] | None = None) -> int:
         writer = csv.DictWriter(fh, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
+
+    votes_out = Path(args.votes_out)
+    with votes_out.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh, fieldnames=["protocol", "seed", "min_votes", "fpr", "tpr"]
+        )
+        writer.writeheader()
+        writer.writerows(vote_rows)
+    for row in vote_rows:
+        print(
+            f"{row['protocol']} seed{row['seed']} votes>={row['min_votes']}: "
+            f"FPR {100 * row['fpr']:.2f}% TPR {100 * row['tpr']:.2f}%",
+            flush=True,
+        )
     return 0
 
 

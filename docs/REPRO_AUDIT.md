@@ -125,7 +125,7 @@ votes = np.sum([prediction == 1 for prediction in combined_predictions], axis=0)
 anomalies_ensemble = (votes >= 1).astype(int)   # OR: chỉ cần 1/4 detector
 ```
 
-**Bằng chứng F1:** cột *Ensemble* ở Table VII của bài báo trùng khớp từng chữ số với cột `Anomaly Detection Rate (Ensemble)` trong `results/Final_Results_8pkt_Anomaly_Detection_2017.csv` của tác giả. Ví dụ GoldenEye 99,08; Heartbleed 99,52; Hulk 98,74; PortScan 98,50; DDoS 99,34; FTP 98,85. Tức là Table VII được sinh bởi luật OR, không phải luật đa số như mô tả.
+**Bằng chứng F1:** cột *Ensemble* ở Table VII của bài báo trùng khớp từng chữ số với cột `Anomaly Detection Rate (Ensemble)` trong `results/Final_Results_8pkt_Anomaly_Detection_2017.csv` của tác giả. Đối chiếu F9 cho thấy Table VI (99,04/6,56) lại khớp luật **majority** (>=3/4) trên cùng artifact - tức hai bảng dùng hai luật khác nhau, đúng như mâu thuẫn giữa văn bản và code. Ví dụ GoldenEye 99,08; Heartbleed 99,52; Hulk 98,74; PortScan 98,50; DDoS 99,34; FTP 98,85. Tức là Table VII được sinh bởi luật OR, không phải luật đa số như mô tả.
 
 **Bằng chứng F2:** Table VI (tr. 4035), dòng *8 Packets*:
 
@@ -230,8 +230,10 @@ attack có thể nằm nửa trước.
 trước" tách benign/attack gần như hoàn hảo; không cần graph, transformer hay học.
 
 **Tái tạo số** (`scripts/eval_direction_leak.py`, `results/direction_leak.csv`): áp đúng cách
-mã hoá benign lên graph `P_paper` của nhóm, chạy đúng bốn detector + contamination của code
-tác giả (StandardScaler trên benign train):
+mã hoá benign lên graph của nhóm, chạy đúng bốn detector + contamination của code tác giả
+(StandardScaler trên benign train). Trên `P_paper`, ngưỡng >=3/4 cho **99,04% @ 5,50% FPR**
+(seed 0); trên `T` cho **99,22% @ 6,66% FPR** (seed 0), tái lập Table VI (99,04% @ 6,56%)
+trong 0,2/0,1 pp (`results/direction_leak_votes.csv`):
 
 | | Benign (FPR) | DDoS | Hulk | PortScan | Ensemble attack |
 |---|---:|---:|---:|---:|---:|

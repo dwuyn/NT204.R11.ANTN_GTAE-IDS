@@ -35,7 +35,7 @@
 
 Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình canonical (p = 2..8 × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p) cho kiểm tra độ bất định, viết 132 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
 
-**Kết quả tái hiện:** con số công bố **TPR 99,04% @ FPR 6,56%** không tái lập được.
+**Kết quả tái hiện:** con số công bố **TPR 99,04% @ FPR 6,56%** không tái lập được bằng một cài đặt đúng. Nó chỉ xuất hiện khi tái tạo **artifact mã hoá hướng** trong pipeline của tác giả: trên `T`, bỏ phiếu >=3/4 cho **99,22% @ 6,66% FPR** (seed 0; 99,22-99,99% @ 6,52-6,66% qua 3 seed) - trùng Table VI trong 0,2 pp TPR và 0,1 pp FPR.
 - Protocol `T` (train benign Monday, test Tue-Fri) đạt TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106** (3 seed).
 - Protocol `P_paper` dựng lại đúng thành phần test của Table II/VII và đúng luật OR trong code tác giả, nhưng vẫn chỉ đạt **3,25%** TPR tại cùng FPR 6,56%.
 
@@ -260,8 +260,22 @@ không cần graph, transformer hay học.
 | Ensemble OR (HBOS suy biến ở pyod 3.6.7) | 17,7% | **100%** |
 | CSV của tác giả (để so) | 13,12% (8,06-9,98%) | 98,50-99,83% |
 
+**Tái lập đúng Table VI.** Với ngưỡng bỏ phiếu >=3/4 trên cùng artifact:
+
+| Protocol | FPR (3 seed) | TPR (3 seed) | Seed 0 |
+|---|---:|---:|---:|
+| `P_paper` | 5,44-5,62% | 95,58-99,04% | 99,04% @ 5,50% |
+| `T` | 6,52-6,66% | 99,22-99,99% | **99,22% @ 6,66%** |
+| Paper Table VI | 6,56% | 99,04% | - |
+
+Đây là cấu hình duy nhất trong toàn bộ đồ án sinh ra đúng 99,04%, và nó đòi hỏi artifact
+hướng. Table VI khớp luật **majority** (>=3/4) đúng như văn bản, còn Table VII khớp **OR**
+của code (F1): hai bảng của bài báo dùng hai luật khác nhau, và CSV công khai (13,12%) là
+kết quả của OR.
+
 Với cách mã hoá nhất quán của nhóm (hướng = sender gói đầu, áp cho cả hai lớp), 99,98% flow
-benign cũng có fwd, nên luật này không còn tín hiệu. Bảng đầy đủ: `results/direction_leak.csv`.
+benign cũng có fwd, nên luật này không còn tín hiệu. Bảng đầy đủ: `results/direction_leak.csv`
+và `results/direction_leak_votes.csv`.
 
 **Các mức đo được khi mã hoá nhất quán** (p=8, threshold đặt để FPR benign test = 6,56%):
 
@@ -345,7 +359,7 @@ Cùng dữ liệu (protocol `T`), cùng mã hoá 25 byte, cùng 4 detector, p = 
 |---|---|
 | Kết hợp packet-level + đồ thị + không giám sát, chưa bài nào trong nhóm liên quan làm | §6.1 |
 | Không cần nhãn tấn công để học biểu diễn | train chỉ dùng benign; zero-day về nguyên tắc |
-| Đặc trưng 25 byte không chứa IP/port, không phụ thuộc TTL/checksum | test chống rò rỉ; A5 |
+| 25 byte không chứa IP/port; tín hiệu **không phụ thuộc** TTL/checksum (A5 zero hoá rồi train lại: AUROC 0,594 -> 0,675) | test chống rò rỉ; A5 |
 | Kiến trúc cài đặt được, kích thước nhỏ (p = 8: d = 64) | [src/model_gtae.py](https://github.com/dwuyn/NT204.R11.ANTN_GTAE-IDS/blob/main/src/model_gtae.py) |
 | Cho phép quyết định theo p gói (khung cho phát hiện sớm) | P1 (Chương 7) |
 
@@ -446,7 +460,7 @@ Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm
 ## CHƯƠNG 8: KẾT LUẬN
 
 1. **Tìm hiểu bài báo:** nhóm phân tích đầy đủ phương pháp, cài đặt đúng Table III/V và Fig. 3/4, và liệt kê những điểm bài báo không mô tả nhưng ảnh hưởng tới khả năng tái lập (§2.5).
-2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 132 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% @ 6,56% **không tái lập được**, kể cả trong thiết lập giống bài báo nhất (`P_paper`: 3,25%). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
+2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 132 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% **không tái lập được bằng cài đặt đúng** (kể cả `P_paper`: 3,25% @ 6,56%); nó **chỉ tái lập được khi tái tạo artifact mã hoá hướng** của tác giả (trên `T`: 99,22% @ 6,66% FPR, seed 0; 99,22-99,99% qua 3 seed). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
 3. **Đối chiếu và so sánh:**
    - Nhóm kiểm chứng được các mâu thuẫn giữa bài báo, code và CSV của tác giả (luật OR, FPR không khớp, contamination 0,06/0,09, test theo từng lớp, notebook không chạy được).
    - **Nguyên nhân chính của 99% đã được truy vết**: hướng gói tin benign bị gán `unknown` và dồn vào nửa sau, tạo ra một luật 1 bit TPR 100% / FPR 0%; tái tạo đúng cách mã hoá đó trên `P_paper` cho 100% TPR @ 17,7% FPR, khớp CSV tác giả (98,5-99,8% @ 13,12%).
@@ -769,3 +783,20 @@ Với mã hoá nhất quán của nhóm, 99,98% benign cũng có fwd, nên luậ
 8 lớp `nn.TransformerEncoderLayer`, `d_model=400`, FFN 64, decoder 400×400; Table III ghi
 6 lớp, d=64. Chạy checkpoint trên feature `P_paper` (cùng semantics), scaler trên `train1`,
 contamination 0,06/0,09: FPR ensemble 19,5%; TPR theo lớp 2,9-81,8% - không tái tạo CSV.
+
+
+## PHỤ LỤC G - ĐỐI CHIẾU BỐN YÊU CẦU CỦA ĐỒ ÁN
+
+| # | Yêu cầu | Trạng thái | Bằng chứng |
+|---|---|---|---|
+| 1 | Tìm hiểu vấn đề và phương pháp của bài báo | Đầy đủ | Ch.1 (bài toán, động cơ, câu hỏi nghiên cứu); Ch.2 (feature 25 byte, graph, encoder eq. 2-8, detector, Table III/V); §2.5 (các giả định) |
+| 2 | Thực hiện phương pháp và đánh giá kết quả | Đầy đủ | Ch.3 (pipeline 51 GB, 132 test, 428 audit); Ch.4 (T, P_paper, 2018, ACI, latency); Ch.5 (audit code); Phụ lục E |
+| 2b | "Tái lập đúng số liệu paper" | **Có điều kiện** | 99,04% TPR tái lập **chỉ khi** tái tạo artifact hướng: trên `T`, >=3/4 cho **99,22% @ 6,66%** (seed 0; 99,22-99,99% @ 6,52-6,66% qua 3 seed) - trùng Table VI trong 0,2/0,1 pp. Cài đặt đúng Fig. 3: 3,25-18,78% @ 6,56%. Table VI khớp >=3/4, Table VII khớp OR; CSV tác giả 13,12% |
+| 3 | So sánh, đánh giá ưu/nhược với bài khác | Đầy đủ | §6.1 (định vị 7 bài); §6.2 (cùng protocol); §6.3 (5 tuyên bố); §6.4 (cách so sánh); §6.5 (ưu/nhược); Phụ lục B (Table XI-XIII) |
+| 4 | Đề xuất giải pháp cải thiện | Đầy đủ | Ch.7: A (B2 mean aggregation, A2 bỏ LapPE), B (P1 conformal + early-exit), kết quả đo; §7.4 kết hợp |
+
+**Kết luận:** cả bốn yêu cầu đã được thực hiện. Riêng yêu cầu "đúng số liệu paper" chỉ đạt
+được ở dạng có điều kiện: 99,04% TPR tái lập được, nhưng phải tái tạo lỗi mã hoá hướng của
+tác giả; FPR công bố 6,56% không khớp bất kỳ ngưỡng rời rạc nào, kể cả trên artifact
+(5,4-8,9%), và CSV công khai của tác giả ghi 13,12%. Đây là kết luận của Chương 5, không
+phải thiếu sót của phần thực hiện.
