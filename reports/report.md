@@ -491,7 +491,17 @@ của biểu diễn vẫn ~0,7 AUROC; B0 raw (không học) đạt 18,78% @ 6,56
 thiện kiến trúc không phải nút thắt.
 
 Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm nghẽn biểu diễn:
-- **P4 - nút = IP và đặc trưng nút nhẹ** (theo Anomal-E [8], Kitsune [11]): giảm phân mảnh đồ thị do port tạm thời.
+- **P4 - nút = IP, có/không node features (ablation 2 bước, theo Anomal-E [8]):**
+  - **P4a (chỉ đổi khoá nút):** `(IP, port)` -> `IP`, giữ nguyên mô hình/edge feature. Hai luồng
+    cùng một host nhưng khác port tạm trước đây không kề nhau, nay dùng chung nút; PortScan
+    6.451 luồng tới 6.451 port đích trước đây tạo 6.451 nút, nay dồn về một hub nạn nhân.
+    Đây là phép thử sạch nhất cho giả thuyết "phân mảnh đồ thị do port".
+  - **P4b (thêm node features):** vector label-free cho mỗi IP: in/out degree, số luồng, số port
+    đích, byte/gói trung bình, thời lượng; chiếu vào `d` rồi cộng vào biểu diễn cạnh ở hai đầu.
+  - **Cổng quyết định (đặt trước):** chỉ làm P4b nếu P4a tăng >= 0,03 AUROC **và** >= 2 pp
+    TPR@FPR=1% so với B2 (0,689 / 6,40%), đồng thời không giảm TPR@6,56%; nếu không, dừng và
+    ghi nhận kết quả âm. Chi phí P4a: dựng lại graph p=8 + train 3 seed (~30-60 phút), không
+    cần dữ liệu hay kiến trúc mới.
 - **P5 - mục tiêu masked reconstruction** (GraphMAE [14]): buộc mô hình dùng ngữ cảnh thay vì sao chép đặc trưng cạnh.
 - **Online conformal / calibration theo cửa sổ trượt:** khôi phục giả định exchangeable khi phân phối trôi theo thời gian.
 
