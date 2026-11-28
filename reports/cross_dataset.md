@@ -85,6 +85,12 @@ Graph: 10.000 edge test, 9.818 nút - hub tấn công (1 attacker → 1 victim, 
 | 6 | 86,3% | 0,101 s | 63,1% | 0,367 s | 0,079 s | 3,76 s |
 | 8 | 79,9% | 0,132 s | 61,9% | 0,369 s | 0,079 s | 3,79 s |
 
+Các cột delay ở trên là **trung vị của trung vị theo ngày** (mỗi ngày một trung vị, rồi lấy
+trung vị 5 ngày). Gộp theo **flow** (`results/wait_p_pooled.csv`) cho con số khác: benign
+0,033/0,040/0,085/0,102 s và attack 0,000/0,002/0,053/0,056 s cho p=2/4/6/8; p95 attack
+1,00/1,00/1,84/1,86 s. Báo cáo dùng bản gộp theo flow; bảng này giữ bản theo ngày để so
+với cách tổng hợp trước đó.
+
 Theo lớp tấn công ở p = 8 (median delay / p95):
 
 | lớp | đạt p=8 | delay median | delay p95 |

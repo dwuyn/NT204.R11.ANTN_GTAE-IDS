@@ -191,11 +191,19 @@ def build_graph(
     flows: Sequence[Mapping[str, Any]],
     packets_by_flow: Mapping[int, Sequence[Mapping[str, Any]]],
     p: int,
+    node_key: str = "ip_port",
 ) -> GraphArrays:
-    """Encode selected flows into edge arrays; UNCERTAIN/short flows are dropped."""
+    """Encode selected flows into edge arrays; UNCERTAIN/short flows are dropped.
+
+    ``node_key`` selects the node identity: ``ip_port`` (the paper's
+    ``(IP, port)`` nodes) or ``ip`` (the P4 ablation, which merges all
+    ephemeral ports of a host into one node).
+    """
     if not 1 <= p <= 8:
         raise ValueError(f"p must be in 1..8 (paper scope), got {p}")
-    node_ids: dict[tuple[str, int], int] = {}
+    if node_key not in ("ip_port", "ip"):
+        raise ValueError(f"unknown node_key: {node_key}")
+    node_ids: dict[tuple, int] = {}
     edge_index: list[tuple[int, int]] = []
     edge_attrs: list[np.ndarray] = []
     ys: list[int] = []
@@ -214,8 +222,12 @@ def build_graph(
         kept = [(row["kept25"], int(row["dir"])) for row in rows[:p]]
         edge_attrs.append(encode_edge(kept, p))
 
-        src = (str(flow["src_ip"]), int(flow["src_port"]))
-        dst = (str(flow["dst_ip"]), int(flow["dst_port"]))
+        if node_key == "ip":
+            src = (str(flow["src_ip"]),)
+            dst = (str(flow["dst_ip"]),)
+        else:
+            src = (str(flow["src_ip"]), int(flow["src_port"]))
+            dst = (str(flow["dst_ip"]), int(flow["dst_port"]))
         for endpoint in (src, dst):
             if endpoint not in node_ids:
                 node_ids[endpoint] = len(node_ids)

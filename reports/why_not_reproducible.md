@@ -179,7 +179,7 @@ Hai quan sát quyết định:
 | F2 | Điểm vận hành công bố không khớp artifact | Paper 6,56% vs CSV 13,12% | Mục tiêu không xác định |
 | F3 | Mỗi lớp một đồ thị attack-only | TPR trên đồ thị riêng <= đồ thị trộn | Không phải lối tắt nhóm khai thác được |
 | F4 | Benign train/test cùng Friday | Same-day GTAE vẫn 3,25% | Cần nhưng chưa đủ |
-| F5 | Detector trên decoder output | Recon 0,8% với mã hoá nhất quán | Không phải nguyên nhân khi không có artifact hướng |
+| F5 | Detector trên decoder output | Recon 4,93% @ 6,56% với mã hoá nhất quán | Không phải nguyên nhân khi không có artifact hướng |
 | F6 | Code không khởi tạo được | `nn.GraphTransformerLayer` không tồn tại | Không xác định được mô hình đã sinh số |
 | F7 | Nhãn gói bị trượt hàng | Precision nhãn attack 11,8% (Thứ Ba) | Làm hỏng so sánh per-class, nhưng Engelen L2/L3 cho thấy nhãn của nhóm khớp 99,5-100% |
 | F8 | Contamination trong code | 0,06/0,09, không phải 0,01 | Giải thích FPR 9-13%; không tạo TPR 99% |

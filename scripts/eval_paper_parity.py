@@ -161,8 +161,11 @@ def _embed(
     feature_input: str = "z",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """(features_train2, features_test, y_test, attack_type_test), cached on disk."""
+    # The cache key must include the model directory: T, T_egsage and T_noPE
+    # produce different embeddings for the same protocol/seed.
+    model_tag = model_path.parents[2].name
     cache = (
-        cache_dir / f"{protocol}_p{p}_seed{seed}_{feature_input}"
+        cache_dir / f"{model_tag}_p{p}_seed{seed}_{feature_input}"
         if cache_dir is not None
         else None
     )

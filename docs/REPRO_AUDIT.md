@@ -44,7 +44,7 @@ vì sao kết quả tái hiện (TPR) thấp hơn rất nhiều so với paper.
 - **Detector hyperparameters:** đúng Table V.
 - **21 model** p=2…8 × seed 0,1,2; 100 epoch; val MSE 0,022–0,041.
 - **Audit artifact:** 428/428 checks (`scripts/audit_artifacts.py`).
-- **Test:** 132 pytest pass (`pytest -q`).
+- **Test:** 133 pytest pass (`pytest -q`).
 
 Các điểm này loại trừ lỗi cài đặt thô ở feature, kiến trúc, detector.
 
@@ -77,9 +77,9 @@ Các thử nghiệm bổ sung (p=8, seed 0; đo trong lần chạy trước retr
 
 | Thí nghiệm | Kết quả | Diễn giải |
 |---|---|---|
-| RandomForest trên **raw edge features**, cùng ngày/phiên | TPR 99,4% @ FPR 6,1%, AUROC 0,972 | Features tách được **pattern cùng lớp/ngày**; có thể lợi dụng checksum/IP identity |
-| RandomForest trên **raw features**, train Tue/Wed → test Thu/Fri | TPR 18,1% @ FPR 6,7%, AUROC 0,924 | Không tách được **lớp tấn công chưa thấy** ở FPR thấp |
-| RandomForest trên **GTAE embeddings** | TPR 99,2–99,6% nhưng FPR 64–71%, AUROC 0,91 | Embedding có tín hiệu nhưng biên benign/attack chồng lấn mạnh |
+| RandomForest trên **raw edge features**, cùng ngày/phiên | TPR 99,9% @ FPR 6,56%, AUROC 0,999 (`results/supervised_bound.csv`) | Features tách được **pattern cùng phiên/ngày**; đây là rò rỉ nhận diện phiên, không phải năng lực phát hiện |
+| RandomForest trên **raw features**, train Tue/Wed → test Thu/Fri | TPR 3,2–3,8% @ FPR 6,56%, AUROC 0,54 | Cross-day sụp hẳn: raw features khoá theo ngày/phiên |
+| RandomForest trên **GTAE embeddings `z`**, cross-day | TPR 11,0–23,2% @ FPR 6,56%, AUROC 0,64–0,75 | Embedding không cứu được dịch chuyển ngày; trần cross-day thấp |
 | MLP-AE (không đồ thị), z=16/64/256 | TPR 1,3–7,3%, AUROC 0,63–0,64 | Không phải lỗi riêng của graph transformer |
 | Bỏ LapPE (A2) | TPR 6,36% @ FPR 1,23%, AUROC 0,682 | PE không phải nguyên nhân chính |
 | Full graph / subgraph 1.000 / K_max=64 | TPR 1–16%, AUROC 0,63–0,67 | Sampler/K_max không phải nguyên nhân chính |

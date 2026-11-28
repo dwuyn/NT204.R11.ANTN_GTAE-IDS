@@ -27,6 +27,7 @@
 | **A2: No LapPE** (Đề xuất A) | GTAE without PE | Temporal T (Sạch) | Ensemble tie | **6,36%** | **1,23%** | **0,682 ± 0,003** | AUROC ổn định theo seed; TPR@1% 12,46% |
 | **B2: E-GraphSAGE-AE** (Đề xuất A) | Mean aggregation, cùng độ sâu/rộng | Temporal T (Sạch) | Ensemble tie | **9,78%** | **1,81%** | **0,689 ± 0,021** | Attention không cần thiết; TPR@1% 11,30% |
 | **A5: Header hygiene** | GTAE, bỏ TTL + 2 checksum | Temporal T (Sạch) | Ensemble tie | **2,83%** | **2,33%** | **0,675** | Train lại 3 seed; TPR@1% **3,77%** ≥ M1 3,65%, AUROC 0,594 → 0,675 ⇒ không phải shortcut định danh |
+| **P4a: nút = IP** | GTAE, gộp port | Temporal T (Sạch) | Ensemble tie | 2,62% | 3,86% | 0,536 | Cổng P4b không đạt (cần ≥0,719 AUROC / ≥8,40% TPR@1); P4b không chạy |
 | **Supervised RF cross-day (raw)** | Random Forest | Tue+Wed → Thu+Fri | Ngưỡng xác suất | **3,2-3,8%** @6,56 | 6,56% | **0,54** | Không phải upper bound; raw key theo ngày |
 | **Supervised RF cross-day (`z`)** | Random Forest | Tue+Wed → Thu+Fri | Ngưỡng xác suất | **11,0-23,2%** @6,56 | 6,56% | **0,64-0,75** | Trần cross-day cao nhất đo được |
 | **Supervised RF same-day (raw)** | Random Forest | Friday 70/30 | Ngưỡng xác suất | **99,9%** | 6,56% | **0,999** | Rò rỉ nhận diện phiên/ngày; không phải phương pháp hợp lệ |

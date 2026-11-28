@@ -14,7 +14,7 @@
 | Yêu cầu đề tài | Đóng góp | Tài liệu |
 |---|---|---|
 | Tìm hiểu vấn đề và phương pháp | Phân tích bài báo; liệt kê các điểm bài báo không mô tả nhưng ảnh hưởng tới tái lập | `reports/report.md` Ch.1-2, `docs/GTAE-IDS_Research_docs.md` |
-| Thực hiện lại và đánh giá | Pipeline từ 51 GB pcap; 21 mô hình; **132 test** + 428 kiểm tra artefact; 4 protocol (`T`, `T_fixed`, `R`, `P_paper`); CIC-IDS2018, ACI-IoT-2023; đo độ trễ end-to-end | Ch.3-4 |
+| Thực hiện lại và đánh giá | Pipeline từ 51 GB pcap; 21 mô hình; **133 test** + 428 kiểm tra artefact; 4 protocol (`T`, `T_fixed`, `R`, `P_paper`); CIC-IDS2018, ACI-IoT-2023; đo độ trễ end-to-end | Ch.3-4 |
 | Phân tích, so sánh với bài liên quan | Đối chiếu bài báo ↔ code ↔ CSV của tác giả; baseline cùng protocol (B0, B1, B2 E-GraphSAGE, A2, A3, A5); đối chiếu từng tuyên bố của bài báo | Ch.5-6, `docs/REPRO_AUDIT.md`, `reports/related_work.md` |
 | Đề xuất cải tiến | (A) encoder mean aggregation / bỏ LapPE; (B) P1 conformal fusion + early-exit | Ch.7, `reports/P1.md` |
 
@@ -42,7 +42,8 @@
 
 | Phương pháp | Mô hình | Dữ liệu | Luật quyết định | TPR | FPR | AUROC |
 |---|---|---|---|---:|---:|---:|
-| **Paper Table VI** | GTAE-IDS | Snapshot (code: Friday 70/30) | "Majority" (code: OR) | **99,04%** | **6,56%** | - |
+| **Paper Table VI** | GTAE-IDS | Snapshot (code: Friday 70/30) | Majority (>=3/4); Table VII/CSV dùng OR | **99,04%** | **6,56%** | - |
+| **Tái tạo artifact hướng (T, >=3/4)** | GTAE + encoding lỗi của tác giả | Protocol T | Majority (>=3/4) | **99,22%** | **6,66%** | - |
 | **CSV công khai của tác giả** | notebook `GTAE_8pkt` | Friday 70/30, mỗi lớp 1 đồ thị | OR (votes ≥ 1) | 98,5-99,8% (theo lớp) | **13,12%** | - |
 | **M1: GTAE tái hiện** | Graph Transformer AE | Protocol T | Ensemble tie (≥ 2/4) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** |
 | P_paper: M1 + OR | Graph Transformer AE | Friday, test = Table VII | OR @ FPR 6,56% matched | **3,25%** | 6,56% | 0,478 |
@@ -52,8 +53,10 @@
 | **A - B2: E-GraphSAGE-AE** | Mean aggregation | Protocol T | Ensemble tie | **9,78%** | **1,81%** | **0,689 ± 0,021** |
 | **A - A2: bỏ LapPE** | GTAE không PE | Protocol T | Ensemble tie | 6,36% | **1,23%** | **0,682 ± 0,003** |
 | **B - P1: Bonferroni α=0,05** | GTAE + conformal | T_fixed | $\pi_{\text{fused}} \le \alpha/7$ | **8,95%** | **3,64%** | 0,662 |
-| Supervised RF (cận trên) | Random Forest | Tue/Wed → Thu/Fri | Ngưỡng xác suất | 18,1% | 6,7% | 0,92 |
-| Supervised RF (cùng phiên) | Random Forest | Cùng ngày | Ngưỡng xác suất | 99,4% | 6,1% | 0,97 |
+| **A+B: B2 + P1, α=0,10** | B2 + conformal, 3 bước | T_fixed p=2/4/8 | $\pi_{\text{fused}} \le \alpha/3$ | **18,52%** | **6,93%** | 0,662 |
+| Supervised RF, cross-day (`z`) | Random Forest | Tue/Wed → Thu/Fri | Ngưỡng xác suất | 11,0-23,2% @6,56 | 6,56% | 0,64-0,75 |
+| Supervised RF, cross-day (raw) | Random Forest | Tue/Wed → Thu/Fri | Ngưỡng xác suất | 3,2-3,8% @6,56 | 6,56% | 0,54 |
+| Supervised RF, same-day (raw) | Random Forest | Cùng ngày | Ngưỡng xác suất | 99,9% @6,56 | 6,56% | 0,999 |
 
 *Lưu ý: mỗi dòng dùng ngưỡng riêng nên FPR khác nhau; so sánh tại cùng FPR xem `reports/seed_stats.md` (cột TPR @ ngưỡng FPR=1%) và `reports/paper_parity.md` (FPR 6,56% matched). P1 Bonferroni có TPR @ FPR=1% bằng 0%, thấp hơn M1 (3,65%).*
 
@@ -92,7 +95,7 @@ ids-proj/
 │   ├── train_all.py       # Huấn luyện toàn bộ mô hình (hỗ trợ resume)
 │   └── audit_artifacts.py # Kiểm toán tự động 428 tiêu chí dữ liệu
 ├── src/                   # Mã nguồn chính của pipeline GTAE-IDS và P1
-├── tests/                 # 132 bài kiểm thử tự động pytest
+├── tests/                 # 133 bài kiểm thử tự động pytest
 └── requirements.txt       # Dependency pins cho Python 3.11
 ```
 
@@ -108,7 +111,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4.2 Chạy kiểm thử tự động (132 tests)
+### 4.2 Chạy kiểm thử tự động (133 tests)
 ```bash
 pytest -q
 ```

@@ -110,7 +110,7 @@ pip install -r requirements.txt   # CPU torch wheel locally; CUDA wheel on Kaggl
 ### Tests and audit
 
 ```bash
-pytest -q                                   # full suite (132 tests), ~8 s
+pytest -q                                   # full suite (133 tests), ~8 s
 pytest tests/test_encoder.py -q             # one file
 pytest tests/test_p1.py::test_fuse_fisher -q
 python scripts/audit_artifacts.py           # 428 checks; needs data/ artifacts, ~47 s
@@ -305,7 +305,7 @@ python scripts/make_ablation_report.py  # results/ablation.csv + reports/ablatio
 ## Testing & QA
 
 - **Framework**: `pytest` (config: `pytest.ini`; `testpaths = tests`, `pythonpath = .`; quiet mode). The `pythonpath` setting is why `pytest` works from the repo root without `PYTHONPATH`.
-- **Run**: `pytest -q` (132 tests, ~8 s); single file/test as shown above.
+- **Run**: `pytest -q` (133 tests, ~8 s); single file/test as shown above.
 - **Test style**: synthetic small arrays/graphs, fixed seeds, `tmp_path`, `pytest.approx`; no network, no real pcap, no model training.
 - **Coverage by file**:
   - `test_encoder.py`: 25-byte Fig. 3 vector, IP/TCP options, direction packing, leakage.

@@ -216,8 +216,10 @@ attack class is represented, so no 2018 per-class table is produced.
 `wait_p = t_p - t_1` for flows reaching p packets, and `delay_p = t_last - t_1` for the
 rest (short flows are zero-padded and cannot be scored before they close).
 
-**Evidence.** Measured on 2017 `T` (`results/wait_p.csv`, 592,554 benign / 438,711 attack
-flows): attack delay median 0.079 s at p=8 but p95 3.79 s; per class at p=8 —
+**Evidence.** Measured on 2017 `T` (`results/wait_p_pooled.csv`, 592,554 benign / 438,711
+attack flows, pooled per flow): attack delay median 0.056 s at p=8, p95 1.86 s. (Taking the
+median of the five per-day medians instead, the older `results/wait_p.csv` gives 0.079 s /
+3.79 s; both are recorded, the pooled value is the flow-level one.) Per class at p=8 —
 Hulk 0.147 s, DDoS 0.60 s, GoldenEye 6.27 s, slowloris 3.00 s (p95 46.5 s),
 Slowhttptest 63.1 s (p95 218 s). Only 0.1% of PortScan flows ever reach 8 packets.
 

@@ -64,6 +64,22 @@ def test_build_graph_shapes_and_semantics():
     np.testing.assert_allclose(graph.edge_attr[0, 75:], 10 / 255)
 
 
+def test_build_graph_ip_nodes_merge_ports():
+    flows = [
+        _flow(0, ("10.0.0.1", 1000), ("10.0.0.2", 80), 0),
+        _flow(1, ("10.0.0.1", 1001), ("10.0.0.2", 443), 1, "PortScan"),
+    ]
+    packets = {0: _packets(0, [0, 1], 10), 1: _packets(1, [0, 1], 20)}
+    by_port = build_graph(flows, packets, p=2)
+    by_ip = build_graph(flows, packets, p=2, node_key="ip")
+    assert by_port.num_nodes == 4
+    assert by_ip.num_nodes == 2
+    # Both flows now share both endpoints: 10.0.0.1 -> 10.0.0.2.
+    assert by_ip.edge_index.tolist() == [[0, 0], [1, 1]]
+    with pytest.raises(ValueError, match="unknown node_key"):
+        build_graph(flows, packets, p=2, node_key="port")
+
+
 def test_save_load_roundtrip(tmp_path):
     flows = [_flow(0, ("10.0.0.1", 1), ("10.0.0.2", 2), 1, "PortScan")]
     packets = {0: _packets(0, [0, 1], 7)}

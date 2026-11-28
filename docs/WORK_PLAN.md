@@ -31,7 +31,7 @@
 
 **Còn lại trước khi chốt:** ablation A1–A6/B2, nhãn corrected Engelen (A3), tag H7; số P1 đã được đồng bộ lại theo `results/P1_summary.csv`.
 
-**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 132 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
+**Không còn blocker kỹ thuật cho bản báo cáo hiện tại.** Toàn bộ 133 test pytest pass; các mục ablation/B2/A3 là mở rộng, không chặn báo cáo.
 
 **Cập nhật 2026-11-22 (rà soát trước khi nộp):**
 - [x] Đối chiếu lại từng cáo buộc với PDF bài báo và repo tác giả; viết lại `docs/REPRO_AUDIT.md` §5–§7 thành F1–F7 kèm mức độ kiểm chứng. Đính chính hai điểm sai: paper **không** nêu train Monday; 6,56% là FPR **Ensemble** (OCSVM 4,03%).
@@ -180,7 +180,7 @@ GTAE + detector, protocol T, mean 3 seed, ensemble `tie`:
 | 7 | 6,90% | 2,55% | 0,711 |
 | 8 | 4,18% | 2,79% | 0,594 |
 
-**Chẩn đoán:** RandomForest supervised trên **cùng edge features** (cùng ngày/phiên) đạt TPR **99,4%** ở FPR 6,1% (AUROC 0,972); nhưng **cross-day/open-class** (train Tue/Wed → test Thu/Fri) chỉ **18,1%** ở FPR 6,7% (AUROC 0,924). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; chưa tái hiện 99% của paper. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
+**Chẩn đoán (cập nhật 2026-11-29):** RandomForest supervised trên **cùng edge features**, same-day, đạt TPR **99,9%** @ FPR 6,56% (AUROC 0,999) - đây là rò rỉ nhận diện phiên; **cross-day** (train Tue/Wed → test Thu/Fri) chỉ **3,2-3,8%** @ 6,56% (AUROC 0,54) trên raw và **11,0-23,2%** (AUROC 0,64-0,75) trên `z` (`results/supervised_bound.csv`). MLP-AE z=16/64/256, full-graph, subgraph 1.000 cạnh, K_max=64, bỏ LapPE đều không cải thiện (TPR 1–16%). Kết luận: features chỉ tách pattern cùng lớp/ngày; **one-class AE + detector chưa học được biên benign**; 99% chỉ tái lập được khi tạo lại artifact hướng (`results/direction_leak.csv`), không tái lập được bằng cài đặt đúng. Rà soát đầy đủ: [`REPRO_AUDIT.md`](REPRO_AUDIT.md).
 
 **Baseline P1 (p=8, mean 3 seed):**
 
@@ -349,7 +349,7 @@ P1 dùng calibration 40% của `train2` (800 flow). Bonferroni α=0,05 kiểm so
 1. **Feature standardization + loss weighting** cho vị trí khác 0 (zero-padding chiếm 50% vector).
 2. **Bottleneck nhỏ hơn** (d=16/32) và **detector trên reconstruction error** (A3).
 3. Chạy **protocol R đầy đủ** (7 p × 3 seed) và **nhãn corrected Engelen** để so sánh.
-4. Nếu TPR vẫn thấp: chốt báo cáo **partial reproduction** + **supervised RF upper bound** (TPR 99,4% @ FPR 6,1%), ghi rõ paper không tái lập được dưới protocol sạch.
+4. Nếu TPR vẫn thấp: chốt báo cáo **partial reproduction** + các phép thử supervised (same-day 99,9% @ 6,56% là rò rỉ; cross-day <= 23,2%), ghi rõ paper không tái lập được bằng cài đặt đúng mà chỉ tái lập được khi tạo lại artifact hướng.
 
 ---
 

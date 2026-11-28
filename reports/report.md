@@ -33,7 +33,7 @@
 
 ## TÓM TẮT
 
-Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình canonical (p = 2..8 × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p) cho kiểm tra độ bất định, viết 132 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
+Đồ án tái hiện độc lập **GTAE-IDS** (IEEE TIFS 2025). Đây là framework học **không giám sát** trên đồ thị luồng mạng, chỉ dùng **p gói đầu** của mỗi luồng để phát hiện tấn công sớm. Nhóm xây dựng lại toàn bộ pipeline từ 51 GB pcap thô của CIC-IDS2017, huấn luyện 21 mô hình canonical (p = 2..8 × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p) cho kiểm tra độ bất định, viết 133 kiểm thử tự động và 428 phép kiểm tra chéo trên artefact.
 
 **Kết quả tái hiện:** con số công bố **TPR 99,04% @ FPR 6,56%** không tái lập được bằng một cài đặt đúng. Nó chỉ xuất hiện khi tái tạo **artifact mã hoá hướng** trong pipeline của tác giả: trên `T`, bỏ phiếu >=3/4 cho **99,22% @ 6,66% FPR** (seed 0; 99,22-99,99% @ 6,52-6,66% qua 3 seed) - trùng Table VI trong 0,2 pp TPR và 0,1 pp FPR.
 - Protocol `T` (train benign Monday, test Tue-Fri) đạt TPR **4,18 ± 4,30%** @ FPR **2,79 ± 1,40%**, AUROC **0,594 ± 0,106** (3 seed).
@@ -144,7 +144,7 @@ Các protocol đánh giá:
 **Quy trình huấn luyện:** 21 mô hình canonical (7 giá trị p × 3 seed) + 28 mô hình bổ sung (4 seed × 7 p, `experiments/T_probe`) để đo độ bất định; lần đầu chạy trên Kaggle T4, bản cuối được huấn luyện lại từ đầu trên CPU ngày 2026-11-16.
 
 ### 3.2 Kiểm thử và chống rò rỉ dữ liệu
-- **132 test `pytest` pass**: không có IP/port trong đặc trưng, các split rời nhau, train chỉ có benign, test cho conformal/early-exit, test cho script thống kê seed.
+- **133 test `pytest` pass**: không có IP/port trong đặc trưng, các split rời nhau, train chỉ có benign, test cho conformal/early-exit, test cho script thống kê seed.
 - Kiểm tra tự động trên artefact: **428/428** phép kiểm tra chéo trên artefact thật (khoá ngoại packet ↔ flow, mã hoá lại, nhãn, split, dựng lại đồ thị tất định).
 
 ---
@@ -159,7 +159,11 @@ Các protocol đánh giá:
 | **M1: GTAE tái hiện** (ensemble tie) | **4,18 ± 4,30%** | **2,79 ± 1,40%** | **0,594 ± 0,106** [0,495-0,705] |
 | M1, chỉ INNE | 8,69 ± 12,30% | 1,84 ± 1,37% | 0,578 ± 0,116 |
 
-**Phương sai giữa các seed rất lớn:** AUROC của 3 seed là 0,705 / 0,581 / 0,495; seed kém nhất gần như đoán ngẫu nhiên. Vì vậy với 3 seed, mọi chênh lệch nhỏ hơn khoảng 1 std **không** đủ để kết luận. Tuy nhiên, khoảng cách tới con số 99% của bài báo lớn hơn hàng chục lần độ lệch chuẩn, nên kết luận "không tái lập được" vẫn đứng vững.
+*Lưu ý:* các cột `TPR@FPR=1%` lấy từ `M1_summary.csv` là TPR tại **ngưỡng quantile 1% của
+calibration benign**; FPR test thực thường cao hơn (M1: 2,3%). Số **matched test FPR 1%** nằm
+ở bảng parity (`M1 2,8%; B2 6,4%; A2 6,2%`).
+
+**Phương sai giữa các seed rất lớn:** AUROC của 3 seed là 0,705 / 0,581 / 0,495; seed kém nhất gần như đoán ngẫu nhiên. Vì vậy với 3 seed, mọi chênh lệch nhỏ hơn khoảng 1 std **không** đủ để kết luận. Tuy nhiên, khoảng cách tới con số 99% của bài báo lớn hơn hàng chục lần độ lệch chuẩn, nên kết luận "không tái lập được bằng một cài đặt đúng" vẫn đứng vững; §5.1 sau đó chỉ ra nó chỉ tái lập được khi tái tạo artifact hướng.
 
 ### 4.2 Đường cong theo p (ensemble tie; 7 seed mỗi p)
 
@@ -246,7 +250,7 @@ Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kế
 
 **Kết luận:** F1 + F2 + F8 cho thấy con số công bố không tái tạo được từ artefact, và bản thân các artefact mâu thuẫn nhau. F3 + F4 + F5 cho thấy thiết lập đánh giá của code dễ hơn nhiều so với triển khai thật. **F9 là mắt xích còn thiếu: nó biến 99% thành một artifact mã hoá, không phải năng lực của mô hình** (mục 5.1). Phần còn lại của khoảng cách (Chương 4.3) cho thấy, ngay cả khi làm theo đúng thiết lập của bài báo, embedding GTAE vẫn không tách được benign khỏi tấn công.
 
-### 5.1 Vì sao không thể khớp 99%: phân rã khoảng cách
+### 5.1 Vì sao không thể khớp 99% bằng cài đặt đúng: phân rã khoảng cách
 
 **Bốn phiên bản của "con số mục tiêu".** Không có một mục tiêu duy nhất để so:
 
@@ -262,7 +266,9 @@ Nguồn: repo `jalalgh7/graph-representation-learning-for-NIDS` (mô hình, kế
 (tức toàn bộ benign). Bước dựng `pkt_vals` ghi mọi hướng khác `'fwd'` vào **nửa sau** của
 block 50 chiều. Hệ quả: 25 chiều đầu của mọi block benign bằng 0, còn gói attack có fwd nằm
 nửa trước. Một luật một bit "có byte khác 0 ở nửa trước" tách hai lớp gần như hoàn hảo mà
-không cần graph, transformer hay học.
+không cần graph, transformer hay học. **Mức kiểm chứng:** file `.pkl` gốc của tác giả không
+công khai, nên F9 được chứng minh bằng **đường code + khớp số** (FPR/TPR trùng CSV), không
+phải bằng cách mở trực tiếp `.pkl`.
 
 | Áp cách mã hoá benign của tác giả lên `P_paper` | Benign (FPR) | TPR mọi lớp |
 |---|---:|---:|
@@ -403,14 +409,15 @@ train cùng protocol `T`, cùng p = 8, 3 seed:
 | Biến thể | Thay đổi | AUROC | TPR @FPR 6,56% | TPR @FPR 1% |
 |---|---|---:|---:|---:|
 | M1 | attention + LapPE | 0,594 | 11,54% | 3,65% |
-| A2 | bỏ LapPE | 0,676 | 15,53% | 6,37% |
+| A2 | bỏ LapPE | 0,682 | **20,34%** | 6,22% |
 | B2 | mean aggregation thay attention | **0,689** | **16,27%** | **6,40%** |
 | B0 | không học gì (raw 400-d) | **0,698** | **18,78%** | 2,13% |
 | B1 | MLP-AE, không đồ thị | 0,595 | - | 6,95% |
 | A3 | reconstruction error thay detector | 0,649 | - | 6,01% |
 
-Toàn bộ họ kiến trúc nằm trong **0,59-0,70 AUROC** và **11,5-18,8% TPR** ở cùng FPR; biến
-thể tốt nhất hơn M1 +0,095 AUROC, nhưng **B0 không học còn cao hơn**. Đổi attention, PE, độ
+Toàn bộ họ kiến trúc nằm trong **0,59-0,70 AUROC** và **11,5-20,3% TPR** ở cùng FPR; B2 hơn
+M1 +0,095 AUROC, nhưng **B0 không học (0,698/18,78%) tương đương B2**; A2 tốt nhất ở FPR
+6,56% (20,34%) nhưng kém B2 ở AUROC và FPR 1% (6,22 so với 6,40%). Đổi attention, PE, độ
 sâu hay thêm tham số chỉ dịch kết quả trong khoảng ~0,1 AUROC; không có biến thể nào tiến
 gần 0,8. Nút thắt là thông tin trong 25 byte header và dịch chuyển benign theo ngày, không
 phải kiến trúc. Vì vậy Đề xuất A chọn **đơn giản hoá và ổn định hoá** thay vì thêm tầng.
@@ -428,13 +435,16 @@ phải kiến trúc. Vì vậy Đề xuất A chọn **đơn giản hoá và ổ
 | | M1 (gốc) | A: bỏ LapPE | A: mean aggregation (B2) |
 |---|---:|---:|---:|
 | AUROC | 0,594 ± 0,106 | **0,682 ± 0,003** | **0,689 ± 0,021** |
-| TPR @ ngưỡng FPR=1% | 3,65 ± 4,48% | **12,46 ± 0,86%** | **11,30 ± 10,52%** |
-| TPR @ FPR 6,56% (quantile benign test) | 11,54% | **15,53%** | **16,27%** (11,0-25,8 theo seed) |
+| TPR @ ngưỡng calibration FPR=1% | 3,65 ± 4,48% | **12,46 ± 0,86%** | **11,30 ± 10,52%** |
+| TPR @ FPR test 1% (matched) | 2,79% | **6,22%** | **6,40%** |
+| TPR @ FPR test 6,56% (matched) | 11,54% | **20,34%** | **16,27%** (11,0-25,8 theo seed) |
 | TPR / FPR (tie) | 4,18% / 2,79% | 6,36% / 1,23% | 9,78% / 1,81% |
 | Độ lệch chuẩn AUROC giữa seed | 0,106 | 0,003 (giảm ~35 lần) | 0,021 (giảm ~5 lần) |
 
 **Đánh giá:**
-- Cả hai biến thể đều cải thiện AUROC khoảng +0,09, giảm FPR, và tăng TPR tại FPR thấp gấp khoảng 3 lần.
+- Cả hai biến thể đều cải thiện AUROC khoảng +0,09, giảm FPR, và tăng TPR ở FPR test 1% gấp ~2,2 lần (6,2-6,4% so với 2,8%); nếu tính theo ngưỡng calibration 1% thì 11,3-12,5% so với 3,65%.
+- **A2** (bỏ PE) đơn giản nhất, ổn định nhất (std AUROC 0,003) và đạt TPR@6,56 cao nhất
+  (20,34%); **B2** nhỉnh hơn ở AUROC/TPR@1% nhưng phương sai seed lớn hơn (0,021).
 - Mean aggregation còn **rẻ hơn**: không tính Q/K/V cho mỗi cặp cạnh, nên giảm phần `forward` vốn chiếm khoảng 11% độ trễ.
 - **Giới hạn:** AUROC ~0,69 vẫn còn xa mức triển khai được. Đề xuất A cải thiện đáng kể so với GTAE nhưng không đóng được khoảng cách tới con số của bài báo.
 
@@ -502,6 +512,12 @@ Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm
     TPR@FPR=1% so với B2 (0,689 / 6,40%), đồng thời không giảm TPR@6,56%; nếu không, dừng và
     ghi nhận kết quả âm. Chi phí P4a: dựng lại graph p=8 + train 3 seed (~30-60 phút), không
     cần dữ liệu hay kiến trúc mới.
+- **Kết quả P4a (đo 2026-11-29):** AUROC **0,536**; TPR 2,62% @ FPR 3,86%; TPR@FPR=6,56%
+  **12,99%**; TPR@1% **0,05%**. So với B2 (0,689 / 16,27% / 6,40%), **cổng không đạt** ở cả
+  hai điều kiện (thiếu 0,153 AUROC và 6,35 pp TPR@1%); P4b **không thực hiện**. Diễn giải:
+  port identity mang thông tin; gộp IP làm mất tín hiệu và tạo hub dày (node test
+  24.030 -> 2.437), nên **phân mảnh port không phải nút thắt**. Chi phí thực tế: 28 phút cho
+  3 seed, gấp ~4-5 lần `T` vì hub lớn làm sampling/line graph chậm hơn.
 - **P5 - mục tiêu masked reconstruction** (GraphMAE [14]): buộc mô hình dùng ngữ cảnh thay vì sao chép đặc trưng cạnh.
 - **Online conformal / calibration theo cửa sổ trượt:** khôi phục giả định exchangeable khi phân phối trôi theo thời gian.
 
@@ -510,16 +526,17 @@ Các hướng khác đã cân nhắc, xếp theo mức độ nhắm vào điểm
 ## CHƯƠNG 8: KẾT LUẬN
 
 1. **Tìm hiểu bài báo:** nhóm phân tích đầy đủ phương pháp, cài đặt đúng Table III/V và Fig. 3/4, và liệt kê những điểm bài báo không mô tả nhưng ảnh hưởng tới khả năng tái lập (§2.5).
-2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 132 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% **không tái lập được bằng cài đặt đúng** (kể cả `P_paper`: 3,25% @ 6,56%); nó **chỉ tái lập được khi tái tạo artifact mã hoá hướng** của tác giả (trên `T`: 99,22% @ 6,66% FPR, seed 0; 99,22-99,99% qua 3 seed). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
+2. **Tái hiện:** pipeline hoàn chỉnh từ pcap, 133 test, 428 kiểm tra artefact, 4 protocol. Con số 99,04% **không tái lập được bằng cài đặt đúng** (kể cả `P_paper`: 3,25% @ 6,56%); nó **chỉ tái lập được khi tái tạo artifact mã hoá hướng** của tác giả (trên `T`: 99,22% @ 6,66% FPR, seed 0; 99,22-99,99% qua 3 seed). Nhóm báo cáo phương sai giữa các seed và các tiêu chí không đạt.
 3. **Đối chiếu và so sánh:**
    - Nhóm kiểm chứng được các mâu thuẫn giữa bài báo, code và CSV của tác giả (luật OR, FPR không khớp, contamination 0,06/0,09, test theo từng lớp, notebook không chạy được).
    - **Nguyên nhân chính của 99% đã được truy vết**: hướng gói tin benign bị gán `unknown` và dồn vào nửa sau, tạo ra một luật 1 bit TPR 100% / FPR 0%; tái tạo đúng cách mã hoá đó trên `P_paper` cho 100% TPR @ 17,7% FPR, khớp CSV tác giả (98,5-99,8% @ 13,12%).
    - Baseline cùng protocol cho thấy attention, LapPE và ngữ cảnh đồ thị đều không phải nguồn tín hiệu.
    - Claim "real-time" không đúng ở mức triển khai.
 4. **Đề xuất:**
-   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09 (0,594 -> 0,689), ổn định hơn 5-38 lần, TPR@FPR=1% gấp khoảng 3 lần, TPR@FPR=6,56% tăng 11,54 -> 16,27% (+41%).
+   - (A) Mean aggregation / bỏ LapPE: AUROC +0,09 (0,594 -> 0,689), ổn định hơn 5-38 lần, TPR@FPR test 1% gấp ~2,2 lần (6,2-6,4% vs 2,8%), TPR@FPR=6,56% tăng 11,54 -> 16,27% (B2, +41%) và 20,34% (A2, +76%).
    - (B) Conformal early-exit: FPR thực đo ≤ α nhưng TPR tăng ít; tại FPR=1% bằng 0.
    - (A+B) B2 + P1: 14,49% @ 4,76% và 18,52% @ 6,93% - tốt nhất ở FPR trung bình, nhưng vẫn 0% tại FPR=1% và chỉ hơn B đơn lẻ 2,4 pp.
+   - (P4a) nút = IP: đã thử, AUROC 0,536 / TPR 12,99% @ 6,56% - **cổng không đạt**, port identity là thông tin hữu ích chứ không phải phân mảnh.
    - Đánh giá thẳng: cải thiện **trung bình**, không đột phá; trần biểu diễn ~0,7 AUROC. Muốn vượt cần thêm thông tin (payload/flow stats) hoặc đổi protocol, không phải tinh chỉnh kiến trúc.
 
 ---
@@ -570,8 +587,9 @@ python scripts/eval_label_shift.py --day tuesday --offset-minutes -180
 python scripts/eval_wait_p.py --out results/wait_p.csv
 
 # 6. Kiểm chứng
-pytest -q                     # 126+ test
-python scripts/audit_artifacts.py   # 428/428
+pytest -q                     # 133 test
+python scripts/audit_artifacts.py        # 428/428
+python scripts/verify_report_numbers.py  # 168 checks: báo cáo vs results/*.csv
 ```
 
 ## PHỤ LỤC B - SỐ LIỆU CÔNG TRÌNH LIÊN QUAN (CHI TIẾT)
@@ -755,9 +773,13 @@ không có lớp này).
 
 Replay Friday: 349.256 flow, 512,6 flow/s replay, **8,2 flow/s detect** so với 12,1 flow/s lưu
 lượng đến; 3.116/3.492 flow đo là `stale` (đóng ở biên capture). Thời gian chờ đủ p gói
-(wait_p, protocol `T`): median delay 0,036 / 0,051 / 0,101 / 0,132 s cho p = 2/4/6/8 ở benign;
-0,000 / 0,008 / 0,079 / 0,079 s ở attack, p95 = 3,79 s. Theo lớp ở p=8: Slowhttptest 63,1 s
-(p95 218 s), slowloris 3,0 s (p95 46,5 s), GoldenEye 6,27 s, PortScan chỉ 0,1% flow đạt 8 gói.
+(wait_p, protocol `T`): **gộp theo flow** (`results/wait_p_pooled.csv`), median delay
+0,033 / 0,040 / 0,085 / 0,102 s cho p = 2/4/6/8 ở benign; 0,000 / 0,002 / 0,053 / 0,056 s ở
+attack, p95 1,00 / 1,00 / 1,84 / 1,86 s. Trung vị của trung vị theo ngày (bảng trong
+`cross_dataset.md`) là 0,036/0,051/0,101/0,132 và 0/0,008/0,079/0,079, p95 3,79 - hai thống
+kê trả lời hai câu hỏi khác nhau; con số trong báo cáo là loại gộp theo flow.
+Theo lớp ở p=8: Slowhttptest 63,1 s (p95 218 s), slowloris 3,0 s (p95 46,5 s),
+GoldenEye 6,27 s, PortScan chỉ 0,1% flow đạt 8 gói.
 
 ## PHỤ LỤC F - CHI TIẾT ĐỐI CHIẾU MÃ NGUỒN (F1-F10)
 
@@ -841,10 +863,10 @@ contamination 0,06/0,09: FPR ensemble 19,5%; TPR theo lớp 2,9-81,8% - không t
 | # | Yêu cầu | Trạng thái | Bằng chứng |
 |---|---|---|---|
 | 1 | Tìm hiểu vấn đề và phương pháp của bài báo | Đầy đủ | Ch.1 (bài toán, động cơ, câu hỏi nghiên cứu); Ch.2 (feature 25 byte, graph, encoder eq. 2-8, detector, Table III/V); §2.5 (các giả định) |
-| 2 | Thực hiện phương pháp và đánh giá kết quả | Đầy đủ | Ch.3 (pipeline 51 GB, 132 test, 428 audit); Ch.4 (T, P_paper, 2018, ACI, latency); Ch.5 (audit code); Phụ lục E |
+| 2 | Thực hiện phương pháp và đánh giá kết quả | Đầy đủ | Ch.3 (pipeline 51 GB, 133 test, 428 audit); Ch.4 (T, P_paper, 2018, ACI, latency); Ch.5 (audit code); Phụ lục E |
 | 2b | "Tái lập đúng số liệu paper" | **Có điều kiện** | 99,04% TPR tái lập **chỉ khi** tái tạo artifact hướng: trên `T`, >=3/4 cho **99,22% @ 6,66%** (seed 0; 99,22-99,99% @ 6,52-6,66% qua 3 seed) - trùng Table VI trong 0,2/0,1 pp. Cài đặt đúng Fig. 3: 3,25-18,78% @ 6,56%. Table VI khớp >=3/4, Table VII khớp OR; CSV tác giả 13,12% |
 | 3 | So sánh, đánh giá ưu/nhược với bài khác | Đầy đủ | §6.1 (định vị 7 bài); §6.2 (cùng protocol); §6.3 (5 tuyên bố); §6.4 (cách so sánh); §6.5 (ưu/nhược); Phụ lục B (Table XI-XIII) |
-| 4 | Đề xuất giải pháp cải thiện | Đầy đủ | Ch.7: A (B2/A2), B (P1), **A+B đã đo** (14,49% @4,76%; 18,52% @6,93%); mức cải thiện trung bình, trần ~0,7 AUROC |
+| 4 | Đề xuất giải pháp cải thiện | Đầy đủ | Ch.7: A (B2/A2), B (P1), **A+B đã đo** (14,49% @4,76%; 18,52% @6,93%); **P4a (nút=IP) đã thử, cổng không đạt** (AUROC 0,536); mức cải thiện trung bình, trần ~0,7 AUROC |
 
 **Kết luận:** cả bốn yêu cầu đã được thực hiện. Riêng yêu cầu "đúng số liệu paper" chỉ đạt
 được ở dạng có điều kiện: 99,04% TPR tái lập được, nhưng phải tái tạo lỗi mã hoá hướng của

@@ -154,7 +154,7 @@ Hai tuyên bố nữa của [1], đối chiếu bằng số đo:
 
 | Điểm | Bằng chứng |
 |---|---|
-| Kiến trúc cạnh (edge-level) + line graph là cài đặt được, không cần PyG | `src/model_gtae.py`, `src/line_graph.py`; 132 test pass |
+| Kiến trúc cạnh (edge-level) + line graph là cài đặt được, không cần PyG | `src/model_gtae.py`, `src/line_graph.py`; 133 test pass |
 | Không cần nhãn tấn công để học biểu diễn | train chỉ dùng Monday benign; eval trên Thứ Ba-Thứ Sáu |
 | Pipeline 25 byte/gói chạy được ở p = 2..8 | 21 checkpoint, `results/M1_summary.csv` |
 | Phát hiện sớm *có* ý nghĩa về chi phí | P1: APD 7,56 gói, 13,22% attack quyết định trước gói 8 |

@@ -83,6 +83,7 @@ def build(
     attack_cap: int = 5000,
     min_packets: int | None = None,
     tag: str | None = None,
+    node_key: str = "ip_port",
 ) -> dict[str, Any]:
     flows_by_day = load_labeled(processed)
     all_flows = [flow for rows in flows_by_day.values() for flow in rows]
@@ -114,11 +115,11 @@ def build(
 
         train_flows = selection.train1 + selection.train2
         train_packets = _packets_for(processed, train_flows)
-        train1_graph = build_graph(selection.train1, train_packets, p)
-        train2_graph = build_graph(selection.train2, train_packets, p)
+        train1_graph = build_graph(selection.train1, train_packets, p, node_key=node_key)
+        train2_graph = build_graph(selection.train2, train_packets, p, node_key=node_key)
 
         test_packets = _packets_for(processed, selection.test)
-        test_graph = build_graph(selection.test, test_packets, p)
+        test_graph = build_graph(selection.test, test_packets, p, node_key=node_key)
 
         base = base_dir / f"p{p}"
         save_graph(train1_graph, base / "train1.npz")
@@ -134,6 +135,10 @@ def build(
     (base_dir / "summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
+    if node_key != "ip_port":
+        (base_dir / "node_key.json").write_text(
+            json.dumps({"node_key": node_key}, indent=2), encoding="utf-8"
+        )
     return summary
 
 
@@ -157,6 +162,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--tag", default=None, help="output subdirectory instead of the split name"
     )
+    parser.add_argument(
+        "--node-key",
+        default="ip_port",
+        choices=["ip_port", "ip"],
+        help="node identity: (IP, port) or IP only (P4 ablation)",
+    )
     args = parser.parse_args(argv)
 
     summary = build(
@@ -171,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         attack_cap=args.attack_cap,
         min_packets=args.min_packets,
         tag=args.tag,
+        node_key=args.node_key,
     )
     print(json.dumps(summary, indent=2))
     return 0

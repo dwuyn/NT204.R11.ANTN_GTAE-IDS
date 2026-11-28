@@ -241,7 +241,7 @@ section.lead p {
 
 ## 5. Kết quả Tái hiện (Protocol T, mean ± std 3 seed)
 
-- **Hạ tầng:** 51 GB pcap CIC-IDS2017 thô, **132 pytest pass**, 428 kiểm tra artefact, 21 mô hình (7 giá trị $p$ × 3 seed).
+- **Hạ tầng:** 51 GB pcap CIC-IDS2017 thô, **133 pytest pass**, 428 kiểm tra artefact, 21 mô hình (7 giá trị $p$ × 3 seed).
 - **Protocol T:** train benign Monday, test Tue-Fri (lựa chọn của nhóm để đo khi phân phối trôi theo thời gian).
 
 | $p$ | TPR (Ours) | FPR (Ours) | AUROC | Paper Table VI |
@@ -268,7 +268,10 @@ Repo: `jalalgh7/graph-representation-learning-for-NIDS` (+ `robust-and-real-time
 | F4 | Benign train/test cùng **Friday 70/30** (paper không nêu ngày) | ✔ |
 | F5 | Detector chạy trên **output decoder**, không phải bottleneck | ✔ |
 | F6 | `GraphAutoencoder` không nối encoder và **không chạy được** như công bố | ✔ code |
-| F7 | Nhãn gói tin **trượt hàng** (thiếu `else` + `dropna`) | ✔ cơ chế, chưa định lượng |
+| F7 | Nhãn gói tin **trượt hàng** (thiếu `else` + `dropna`) | ✔ + định lượng: 13,9% gói sai, precision 11,8% |
+| F8 | Contamination thực trong code là **0,06/0,09**, không phải 0,01 | ✔ |
+| F9 | Benign nhận `Direction='unknown'` và bị dồn nửa sau; **luật 1 bit TPR 100%/FPR 0%** | ✔ code + tái tạo số |
+| F10 | Checkpoint công bố (8 lớp, d_model 400) khác Table III và không tái tạo CSV | ✔ |
 
 $\implies$ Nhóm chỉ khẳng định **mâu thuẫn kiểm tra được**, không suy diễn mô hình thật là gì.
 
@@ -399,10 +402,10 @@ Flow ID  | Actual Class | Attack Name            | Decision   | Exit At | P-Valu
 
 ## 14. Kết luận & Hạn chế
 
-1. **Tìm hiểu & tái hiện:** pipeline đầy đủ từ pcap, đúng Table III/V và Fig. 3/4; 132 test, 428 kiểm tra artefact. Con số 99,04% @ 6,56% **không tái lập được** (`T`: 4,18%; `P_paper`: 3,25%).
-2. **Đối chiếu & so sánh:** 7 mâu thuẫn có trích dẫn giữa paper, code và CSV; baseline cùng protocol cho thấy attention, LapPE và đồ thị không phải nguồn tín hiệu; claim real-time không đạt.
+1. **Tìm hiểu & tái hiện:** pipeline đầy đủ từ pcap, đúng Table III/V và Fig. 3/4; 133 test, 428 kiểm tra artefact. Con số 99,04% @ 6,56% **không tái lập được bằng cài đặt đúng** (`T`: 4,18%; `P_paper`: 3,25%); chỉ tái lập được khi tạo lại artifact hướng (99,22% @ 6,66%, seed 0).
+2. **Đối chiếu & so sánh:** 10 phát hiện F1-F10 có trích dẫn giữa paper, code và CSV; baseline cùng protocol cho thấy attention, LapPE và đồ thị không phải nguồn tín hiệu; claim real-time không đạt.
 3. **Đề xuất:** (A) encoder gọn hơn: AUROC +0,09, ổn định hơn; (B) conformal early-exit: FPR ≤ α nhưng TPR tăng ít.
-4. **Hạn chế:** 3 seed cho baseline/P1 (M1 dùng 7 seed cho đường cong p); số của E-GraphSAGE/PBCNN/SPIN-IDS là nguồn thứ cấp; F3/F7 đã định lượng; chưa chạy A + B kết hợp.
+4. **Hạn chế:** 3 seed cho baseline/P1 (M1 dùng 7 seed cho đường cong p); số của E-GraphSAGE/PBCNN/SPIN-IDS là nguồn thứ cấp; F3/F7 đã định lượng; A+B đã chạy (18,52% @ 6,93% ở α=0,10) nhưng vẫn 0% tại FPR=1%.
 
 ---
 
