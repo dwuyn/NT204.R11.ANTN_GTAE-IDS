@@ -552,6 +552,12 @@ python -m src.label --flows data/processed/flows_wednesday.parquet --offset-minu
   --out data/processed/flows_wednesday_labeled.parquet
 python -m src.build_dataset --p 2 3 4 5 6 7 8 --out data/graphs
 
+# P4a ablation: node = IP (negative result in §7.4)
+python -m src.build_dataset --p 8 --out data/graphs --tag T_ip --node-key ip
+python scripts/train_all.py --graphs data/graphs/T_ip --out experiments/T_ip --ps 8 --device cpu
+python -m src.eval --models experiments/T_ip --graphs data/graphs/T_ip \
+  --out results/P4a --ps 8 --seeds 0 1 2 --device cpu
+
 # 2. Huấn luyện + đánh giá (21 model = 7 p × 3 seed; + 28 model seed 3..6 để đo bất định)
 python scripts/train_all.py --graphs data/graphs/T --out experiments/T --ps 2 3 4 5 6 7 8 --device cpu
 python -m src.eval --models experiments/T --graphs data/graphs/T --out results \
@@ -585,6 +591,7 @@ python scripts/make_seed_stats.py
 python scripts/eval_per_class_graphs.py --p 8 --seeds 0 1 2
 python scripts/eval_label_shift.py --day tuesday --offset-minutes -180
 python scripts/eval_wait_p.py --out results/wait_p.csv
+python scripts/eval_wait_p_pooled.py --out results/wait_p_pooled.csv
 
 # 6. Kiểm chứng
 pytest -q                     # 133 test
